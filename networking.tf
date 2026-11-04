@@ -78,7 +78,7 @@ locals {
 }
 
 module "vpc" {
-  source                     = "git::https://github.com/leanspace/platform-infra-modules.git//aws/networking/vpc?ref=main"
+  source                     = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc?ref=main"
   name                       = var.name
   azs                        = local.azs
   private_subnet_tags        = local.private_subnet_tags
@@ -92,14 +92,14 @@ module "vpc" {
 }
 
 module "vpc_flow_logs" {
-  source         = "git::https://github.com/leanspace/platform-infra-modules.git//aws/networking/vpc-flow-logs?ref=main"
+  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs?ref=main"
   s3_bucket_name = "${var.resource_prefix}-vpc-flow-logs-${var.environment}"
   tags           = local.networking_tags
 }
 
 module "vpc_endpoints" {
   depends_on     = [module.vpc]
-  source         = "git::https://github.com/leanspace/platform-infra-modules.git//aws/networking/vpc-endpoints?ref=main"
+  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints?ref=main"
   vpc_id         = module.vpc.vpc_id
   vpc_cidr_block = module.vpc.vpc_cidr_block
   endpoints      = local.vpc_endpoints
@@ -108,7 +108,7 @@ module "vpc_endpoints" {
 
 module "vpc_lattice" {
   depends_on         = [module.vpc]
-  source             = "git::https://github.com/leanspace/platform-infra-modules.git//aws/networking/vpc-lattice?ref=main"
+  source             = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-lattice?ref=main"
   name               = "${var.resource_prefix}-vpc-lattice-${var.environment}"
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [aws_security_group.vpc_lattice_allow_all.id]

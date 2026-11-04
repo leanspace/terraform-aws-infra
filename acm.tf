@@ -3,7 +3,7 @@ data "aws_route53_zone" "selected" {
 }
 
 module "agnostk_certificate" {
-  source = "git::https://github.com/leanspace/platform-infra-modules.git//aws/acm?ref=main"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//acm?ref=main"
 
   domain_name               = var.domain_name
   route53_zone_id           = data.aws_route53_zone.selected.zone_id

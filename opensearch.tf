@@ -37,7 +37,7 @@ data "aws_partition" "current" {}
 
 # This block creates kms key for OpenSearch cluster
 module "opensearch_kms_key" {
-  source = "git::https://github.com/leanspace/platform-infra-modules.git//aws/kms?ref=main"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//kms?ref=main"
 
   kms_description = "KMS key for ${var.resource_prefix} ${var.environment} opensearch cluster."
   kms_aliases     = ["${local.opensearch_name_prefix}-opensearch-key-alias"]
@@ -52,7 +52,7 @@ module "opensearch_kms_key" {
 
 # This block creates the OpenSearch cluster
 module "opensearch" {
-  source = "git::https://github.com/leanspace/platform-infra-modules.git//aws/opensearch?ref=main"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//opensearch?ref=main"
 
   vpc_id          = module.vpc.vpc_id
   private_subnets = local.opensearch_cluster_subnet_ids
