@@ -13,12 +13,16 @@ locals {
   # else (confirmed: AWS rejects a 14-family parameter group against an
   # aurora-postgresql18 cluster). Derive and pass it explicitly instead.
   aurora_parameter_group_family = "aurora-postgresql${split(".", var.aurora_engine_version)[0]}"
+  aurora_major_version          = tonumber(split(".", var.aurora_engine_version)[0])
 
   # Previously database/db-parameter-group.tf
   db_parameter_group_parameters = [
     { name = "shared_preload_libraries", value = "auto_explain,pg_stat_statements,pg_hint_plan,pgaudit", apply_method = "pending-reboot" },
     { name = "log_statement", value = "ddl", apply_method = "pending-reboot" }, # Changed to pending-reboot
-    { name = "log_connections", value = 1, apply_method = "immediate" },
+    # PostgreSQL 18 changed log_connections from a boolean to an enum list
+    # (receipt, authentication, authorization, setup_durations, all) - the old
+    # "1" (PG <18's "on") is rejected on 18+. "all" is the closest equivalent.
+    { name = "log_connections", value = local.aurora_major_version >= 18 ? "all" : "1", apply_method = "immediate" },
     { name = "log_disconnections", value = 1, apply_method = "immediate" },
     { name = "log_lock_waits", value = 1, apply_method = "immediate" },
     { name = "log_min_duration_statement", value = 5000, apply_method = "immediate" },
