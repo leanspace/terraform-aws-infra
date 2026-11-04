@@ -280,13 +280,10 @@ resource "aws_eks_access_policy_association" "admins" {
 
 # Role assumed by platform-delivery's deploy-to-dev.yml (called from service repos via
 # workflow_call, so the OIDC sub is the *caller* repo). Unlike the account-wide
-# github-deployment-role (AdministratorAccess, fixed repo list), it can only describe
-# this cluster and is admin inside it. Created only when enable_github_eks_deploy_role.
-data "aws_iam_openid_connect_provider" "github" {
-  count = var.enable_github_eks_deploy_role ? 1 : 0
-  url   = "https://token.actions.githubusercontent.com"
-}
-
+# github-deployment-role (AdministratorAccess, fixed repo list - see iam.tf), it can
+# only describe this cluster and is admin inside it. Created only when
+# enable_github_eks_deploy_role. Shares iam.tf's aws_iam_openid_connect_provider.github
+# (AWS allows only one OIDC provider per URL per account).
 resource "aws_iam_role" "github_eks_deploy" {
   count = var.enable_github_eks_deploy_role ? 1 : 0
   name  = "leanspace-${var.environment}-github-eks-deploy"
@@ -297,7 +294,7 @@ resource "aws_iam_role" "github_eks_deploy" {
       {
         Effect = "Allow"
         Principal = {
-          Federated = data.aws_iam_openid_connect_provider.github[0].arn
+          Federated = aws_iam_openid_connect_provider.github[0].arn
         }
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {

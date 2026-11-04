@@ -231,6 +231,18 @@ variable "github_eks_deploy_subjects" {
   default     = []
 }
 
+variable "enable_github_deployment_role" {
+  description = "Whether to create github-deployment-role: account-wide AdministratorAccess via GitHub Actions OIDC, restricted to github_deployment_role_subjects (required when true - see its own validation). This role (and the GitHub OIDC provider it and github-eks-deploy both share) previously came from this account's own bootstrap process outside this repo - not present in a freshly-created account until created here. Defaults to false, same as enable_github_eks_deploy_role, since every existing environment's tfvars predates this variable and doesn't set github_deployment_role_subjects."
+  type        = bool
+  default     = false
+}
+
+variable "github_deployment_role_subjects" {
+  description = "GitHub OIDC sub patterns allowed to assume github-deployment-role, e.g. \"repo:leanspace/platform-delivery:ref:refs/heads/main\". Required when enable_github_deployment_role is true."
+  type        = list(string)
+  default     = []
+}
+
 variable "node_groups" {
   description = "Map of EKS managed node groups to create. Keys are node group names. A 'system' pool is required (untainted add-ons + outputs asg_name/min_nodes/max_nodes)."
   type = map(object({

@@ -152,20 +152,22 @@ s3_buckets = {
 | [aws_eks_access_entry.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/eks_access_entry) | resource |
 | [aws_eks_access_policy_association.admins](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/eks_access_policy_association) | resource |
 | [aws_eks_access_policy_association.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/eks_access_policy_association) | resource |
+| [aws_iam_openid_connect_provider.github](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_openid_connect_provider) | resource |
 | [aws_iam_policy.alb_controller](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_policy) | resource |
 | [aws_iam_role.alb_controller](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role.ebs_csi](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
+| [aws_iam_role.github_deployment](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy_attachment.alb_controller_attach](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.ebs_csi](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_iam_role_policy_attachment.github_deployment_admin](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_security_group.vpc_lattice_allow_all](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/security_group) | resource |
 | [aws_security_group_rule.postgres_self_reference](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/security_group_rule) | resource |
 | [time_sleep.wait_for_oidc](https://registry.terraform.io/providers/hashicorp/time/0.13.1/docs/resources/sleep) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/caller_identity) | data source |
 | [aws_eks_cluster.this](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/eks_cluster) | data source |
-| [aws_iam_openid_connect_provider.github](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/iam_openid_connect_provider) | data source |
 | [aws_iam_openid_connect_provider.oidc](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/iam_openid_connect_provider) | data source |
 | [aws_iam_session_context.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/iam_session_context) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/partition) | data source |
@@ -197,6 +199,7 @@ s3_buckets = {
 | <a name="input_enable_acm"></a> [enable\_acm](#input\_enable\_acm) | Whether to create the ACM certificate. | `bool` | `true` | no |
 | <a name="input_enable_database"></a> [enable\_database](#input\_enable\_database) | Whether to create the Aurora Postgres database. | `bool` | `true` | no |
 | <a name="input_enable_flow_log"></a> [enable\_flow\_log](#input\_enable\_flow\_log) | Whether or not to enable VPC Flow Logs | `bool` | `true` | no |
+| <a name="input_enable_github_deployment_role"></a> [enable\_github\_deployment\_role](#input\_enable\_github\_deployment\_role) | Whether to create github-deployment-role: account-wide AdministratorAccess via GitHub Actions OIDC, restricted to github\_deployment\_role\_subjects (required when true - see its own validation). This role (and the GitHub OIDC provider it and github-eks-deploy both share) previously came from this account's own bootstrap process outside this repo - not present in a freshly-created account until created here. Defaults to false, same as enable\_github\_eks\_deploy\_role, since every existing environment's tfvars predates this variable and doesn't set github\_deployment\_role\_subjects. | `bool` | `false` | no |
 | <a name="input_enable_github_deployment_role_admin_access"></a> [enable\_github\_deployment\_role\_admin\_access](#input\_enable\_github\_deployment\_role\_admin\_access) | Whether to grant arn:aws:iam::<account\_id>:role/github-deployment-role EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal. | `bool` | `true` | no |
 | <a name="input_enable_github_eks_deploy_role"></a> [enable\_github\_eks\_deploy\_role](#input\_enable\_github\_eks\_deploy\_role) | Create the leanspace-<env>-github-eks-deploy role (GitHub Actions OIDC, eks:DescribeCluster + cluster admin) used by platform-delivery's deploy-to-dev.yml. | `bool` | `false` | no |
 | <a name="input_enable_networking"></a> [enable\_networking](#input\_enable\_networking) | Whether to create the networking module's VPC. Set to false (and provide vpc\_id/private\_subnets/public\_subnets) when reusing an existing VPC instead - e.g. during the agnostic migration, where the VPC already exists from a CloudFormation stack and this module's own state has nothing in it. | `bool` | `true` | no |
@@ -205,6 +208,7 @@ s3_buckets = {
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment for this deployment (e.g., agnostk, develop, prod) | `string` | n/a | yes |
 | <a name="input_flow_log_destination_arn"></a> [flow\_log\_destination\_arn](#input\_flow\_log\_destination\_arn) | The ARN of the CloudWatch log group or S3 bucket where VPC Flow Logs will be pushed. If this ARN is a S3 bucket the appropriate permissions need to be set on that bucket's policy. When create\_flow\_log\_cloudwatch\_log\_group is set to false this argument must be provided | `string` | `""` | no |
 | <a name="input_flow_log_destination_type"></a> [flow\_log\_destination\_type](#input\_flow\_log\_destination\_type) | Type of flow log destination. Can be s3, kinesis-data-firehose or cloud-watch-logs | `string` | `"s3"` | no |
+| <a name="input_github_deployment_role_subjects"></a> [github\_deployment\_role\_subjects](#input\_github\_deployment\_role\_subjects) | GitHub OIDC sub patterns allowed to assume github-deployment-role, e.g. "repo:leanspace/platform-delivery:ref:refs/heads/main". Required when enable\_github\_deployment\_role is true. | `list(string)` | `[]` | no |
 | <a name="input_github_eks_deploy_subjects"></a> [github\_eks\_deploy\_subjects](#input\_github\_eks\_deploy\_subjects) | GitHub OIDC sub patterns allowed to assume the github-eks-deploy role, e.g. "repo:leanspace/*:ref:refs/heads/main". Required when enable\_github\_eks\_deploy\_role is true. | `list(string)` | `[]` | no |
 | <a name="input_high_availability"></a> [high\_availability](#input\_high\_availability) | Enable high availability for the OpenSearch cluster | `bool` | `false` | no |
 | <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | The ARN for the KMS encryption key. When specifying `kms_key_id`, `storage_encrypted` needs to be set to `true` | `string` | `null` | no |
