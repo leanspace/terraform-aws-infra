@@ -276,6 +276,12 @@ variable "services_s3_bucket_names" {
   default     = []
 }
 
+variable "enable_github_deployment_role_admin_access" {
+  description = "Whether to grant arn:aws:iam::<account_id>:role/github-deployment-role EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal."
+  type        = bool
+  default     = true
+}
+
 variable "node_security_group_tags" {
   description = "Extra node security group tags (null value removes a tag), passed to the cluster module. Use { \"kubernetes.io/cluster/<cluster_name>\" = null } so the AWS Load Balancer Controller sees a single cluster-tagged SG per pod ENI."
   type        = map(string)

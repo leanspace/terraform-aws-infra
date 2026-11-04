@@ -13,7 +13,7 @@ locals {
 
   extra_admin_role_arns = toset([
     for arn in concat(
-      [local.github_deployment_role_arn],
+      var.enable_github_deployment_role_admin_access ? [local.github_deployment_role_arn] : [],
       var.eks_admin_principal_arns
     ) : arn if arn != data.aws_iam_session_context.current.issuer_arn
   ])
