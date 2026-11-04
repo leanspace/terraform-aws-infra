@@ -64,7 +64,8 @@ output "cluster_name" {
 # Renamed from "cluster_arn" (collided with database's output of the same
 # name now that both live in one root).
 output "eks_cluster_arn" {
-  value = module.eks_cluster.cluster_arn
+  description = "The ARN of the EKS cluster."
+  value       = module.eks_cluster.cluster_arn
 }
 
 output "cluster_endpoint" {
@@ -130,7 +131,7 @@ output "private_route_table_ids" {
 }
 
 output "flow_log_destination_arn" {
-  description = "The ID of the VPC (null if enable_networking is false - no equivalent when reusing an existing VPC)"
+  description = "The ARN of the VPC flow log destination (null if enable_networking is false - no equivalent when reusing an existing VPC)"
   value       = try(module.vpc_flow_logs[0].s3_bucket_arn, null)
 }
 
