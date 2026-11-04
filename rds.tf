@@ -7,6 +7,13 @@ locals {
     team               = var.team_name
   }
 
+  # platform-infra-modules//aws/database defaults both parameter group family
+  # variables to a hardcoded "aurora-postgresql14", independent of
+  # aurora_engine_version - breaks the moment aurora_engine_version is anything
+  # else (confirmed: AWS rejects a 14-family parameter group against an
+  # aurora-postgresql18 cluster). Derive and pass it explicitly instead.
+  aurora_parameter_group_family = "aurora-postgresql${split(".", var.aurora_engine_version)[0]}"
+
   # Previously database/db-parameter-group.tf
   db_parameter_group_parameters = [
     { name = "shared_preload_libraries", value = "auto_explain,pg_stat_statements,pg_hint_plan,pgaudit", apply_method = "pending-reboot" },
@@ -69,13 +76,15 @@ module "postgres" {
       source_security_group_id = null
     }
   }
-  security_group_tags             = local.database_tags
-  final_snapshot_identifier       = "${var.resource_prefix}-${var.environment}-db-final-snapshot"
-  db_cluster_parameter_group_name = "${var.resource_prefix}-${var.environment}-cluster-parameter-group"
-  db_parameter_group_name         = "${var.resource_prefix}-${var.environment}-parameter-group"
-  db_parameter_group_parameters   = local.db_parameter_group_parameters
-  tags                            = local.database_tags
-  cloudwatch_log_group_kms_key_id = module.db_kms_key[0].key_arn
+  security_group_tags               = local.database_tags
+  final_snapshot_identifier         = "${var.resource_prefix}-${var.environment}-db-final-snapshot"
+  db_cluster_parameter_group_name   = "${var.resource_prefix}-${var.environment}-cluster-parameter-group"
+  db_cluster_parameter_group_family = local.aurora_parameter_group_family
+  db_parameter_group_name           = "${var.resource_prefix}-${var.environment}-parameter-group"
+  db_parameter_group_family         = local.aurora_parameter_group_family
+  db_parameter_group_parameters     = local.db_parameter_group_parameters
+  tags                              = local.database_tags
+  cloudwatch_log_group_kms_key_id   = module.db_kms_key[0].key_arn
 }
 
 resource "aws_security_group_rule" "postgres_self_reference" {
