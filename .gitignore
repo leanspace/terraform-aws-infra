@@ -1,0 +1,17 @@
+# Local Terraform working state - never commit real state, only the lock file.
+.terraform/
+*.tfstate
+*.tfstate.*
+!*.tfstate.tfvars
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Generated per-run, never hand-authored or committed.
+terraform.tfvars
+backend.hcl

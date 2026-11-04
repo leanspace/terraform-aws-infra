@@ -1,7 +1,7 @@
 locals {
-  common_infra_tags = {
+  s3_tags = {
     component-category = var.component_category
-    component-type     = var.component_type
+    component-type     = "s3"
     environment        = var.environment
     managed-by         = "terraform"
   }
@@ -83,10 +83,10 @@ module "bucket" {
   kms_key_arn        = each.value.kms_key_arn
   lifecycle_rule     = each.value.lifecycle_rule
   policy_json        = each.value.policy_json
-  tags               = merge(local.common_infra_tags, each.value.tags)
+  tags               = merge(local.s3_tags, each.value.tags)
 }
 
-module "vault_export" {
+module "vault_export_s3" {
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [

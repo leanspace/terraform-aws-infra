@@ -14,7 +14,7 @@ module "agnostk_certificate" {
   }
 }
 
-module "vault_export" {
+module "vault_export_acm" {
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [

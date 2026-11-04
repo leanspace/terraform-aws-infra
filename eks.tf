@@ -1,7 +1,7 @@
 locals {
-  common_infra_tags = {
+  eks_tags = {
     component-category = var.component_category
-    component-type     = var.component_type
+    component-type     = "kubernetes-cluster"
     environment        = var.environment
     managed-by         = "terraform"
     team               = var.team_name
@@ -10,8 +10,8 @@ locals {
   cluster_name = "${var.resource_prefix}-${var.environment}-eks-cluster"
 
   use_existing_vpc = var.vpc_id != ""
-  vpc_id           = local.use_existing_vpc ? var.vpc_id : data.terraform_remote_state.networking[0].outputs.vpc_id
-  private_subnets  = local.use_existing_vpc ? var.private_subnets : data.terraform_remote_state.networking[0].outputs.private_subnets
+  vpc_id           = local.use_existing_vpc ? var.vpc_id : module.vpc.vpc_id
+  private_subnets  = local.use_existing_vpc ? var.private_subnets : module.vpc.private_subnets
 
   github_deployment_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-deployment-role"
 
@@ -23,24 +23,8 @@ locals {
   ])
 }
 
-data "aws_caller_identity" "current" {}
-
 data "aws_iam_session_context" "current" {
   arn = data.aws_caller_identity.current.arn
-}
-
-# Used when vpc_id is not provided. Skipped when deploying into an existing VPC.
-data "terraform_remote_state" "networking" {
-  count   = local.use_existing_vpc ? 0 : 1
-  backend = "http"
-  config = {
-    address                = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/core/networking"
-    lock_address           = "https://backend.vault.leanspace.io/v1/lock/aws/${var.environment}/core/networking"
-    unlock_address         = "https://backend.vault.leanspace.io/v1/lock/aws/${var.environment}/core/networking"
-    lock_method            = "POST"
-    unlock_method          = "DELETE"
-    skip_cert_verification = true
-  }
 }
 
 # Tag existing subnets so AWS Load Balancer Controller can discover them.
@@ -80,7 +64,7 @@ data "http" "alb_controller_policy" {
 module "eks_control_plane_logs" {
   source       = "git::https://github.com/leanspace/platform-infra-modules.git//aws/eks/logs?ref=main"
   cluster_name = local.cluster_name
-  tags         = local.common_infra_tags
+  tags         = local.eks_tags
 }
 
 module "eks_cluster" {
@@ -99,7 +83,7 @@ module "eks_cluster" {
 
   node_security_group_tags = var.node_security_group_tags
 
-  tags = local.common_infra_tags
+  tags = local.eks_tags
 }
 
 resource "time_sleep" "wait_for_oidc" {
@@ -147,7 +131,7 @@ module "eks_managed_node_group" {
   metadata_http_put_response_hop_limit = var.node_imds_hop_limit
 
   environment = var.environment
-  tags        = local.common_infra_tags
+  tags        = local.eks_tags
 }
 
 module "install_coredns_addon" {
@@ -156,7 +140,7 @@ module "install_coredns_addon" {
   addon_name    = "coredns"
   addon_version = var.coredns_addon_version
   cluster_name  = local.cluster_name
-  tags          = local.common_infra_tags
+  tags          = local.eks_tags
 }
 
 module "install_ebscsi_addon" {
@@ -165,7 +149,7 @@ module "install_ebscsi_addon" {
   addon_name    = "aws-ebs-csi-driver"
   addon_version = var.ebs_addon_version
   cluster_name  = local.cluster_name
-  tags          = local.common_infra_tags
+  tags          = local.eks_tags
 
   service_account_role_arn = aws_iam_role.ebs_csi.arn
 }
@@ -193,15 +177,13 @@ resource "aws_iam_role" "ebs_csi" {
     ]
   })
 
-  tags = local.common_infra_tags
+  tags = local.eks_tags
 }
 
 resource "aws_iam_role_policy_attachment" "ebs_csi" {
   role       = aws_iam_role.ebs_csi.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
 }
-
-data "aws_region" "current" {}
 
 # cluster-autoscaler (platform-enablers chart, kube-system/cluster-autoscaler) only manages the
 # system node group's ASG (--nodes=min:max:<system asg>), so scaling actions are scoped to it.
@@ -244,7 +226,7 @@ module "cluster_autoscaler_irsa_role" {
   oidc_provider_url        = data.aws_eks_cluster.this.identity[0].oidc[0].issuer
   service_account_subjects = ["system:serviceaccount:kube-system:cluster-autoscaler"]
 
-  tags = local.common_infra_tags
+  tags = local.eks_tags
 }
 
 resource "aws_iam_policy" "alb_controller" {
@@ -334,7 +316,7 @@ resource "aws_iam_role" "github_eks_deploy" {
     ]
   })
 
-  tags = local.common_infra_tags
+  tags = local.eks_tags
 
   lifecycle {
     precondition {
@@ -436,11 +418,11 @@ module "services_s3_irsa_role" {
     "system:serviceaccount:lambda:*",
   ]
 
-  tags = local.common_infra_tags
+  tags = local.eks_tags
 }
 
 locals {
-  vault_exports = concat(
+  eks_vault_exports = concat(
     [
       {
         mount = "leanspace"
@@ -483,8 +465,8 @@ locals {
   )
 }
 
-module "vault_export" {
+module "vault_export_eks" {
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
-  create_secrets = var.enable_vault_export ? local.vault_exports : []
+  create_secrets = var.enable_vault_export ? local.eks_vault_exports : []
 }

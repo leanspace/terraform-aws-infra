@@ -4,9 +4,9 @@ data "aws_availability_zones" "available" {
 
 locals {
   azs = slice(data.aws_availability_zones.available.names, 0, 3)
-  common_infra_tags = {
+  networking_tags = {
     component-category = var.component_category
-    component-type     = var.component_type
+    component-type     = "networking"
     environment        = var.environment
     managed-by         = "terraform"
     team               = var.team_name
@@ -33,6 +33,48 @@ locals {
       AZ   = az
     }
   }
+
+  # Previously networking/endpoints.tf
+  vpc_endpoints = {
+    s3 = {
+      service             = "s3"
+      private_dns_enabled = true
+      service_type        = "Gateway"
+      route_table_ids     = flatten([module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])
+      subnet_ids          = flatten([module.vpc.private_subnets, module.vpc.public_subnets])
+      tags                = { Name = "s3-vpc-endpoint" }
+    },
+    dynamodb = {
+      service         = "dynamodb"
+      service_type    = "Gateway"
+      route_table_ids = flatten([module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])
+      tags            = { Name = "dynamodb-vpc-endpoint" }
+    },
+    kinesis = {
+      service             = "kinesis-streams"
+      service_type        = "Interface"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc.private_subnets
+    },
+    ecr_api = {
+      service             = "ecr.api"
+      service_type        = "Interface"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc.private_subnets
+    },
+    ecr_dkr = {
+      service             = "ecr.dkr"
+      service_type        = "Interface"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc.private_subnets
+    },
+    cloudwatch = {
+      service             = "logs"
+      service_type        = "Interface"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc.private_subnets
+    },
+  }
 }
 
 module "vpc" {
@@ -46,13 +88,13 @@ module "vpc" {
   enable_flow_log            = var.enable_flow_log
   flow_log_destination_type  = var.enable_flow_log ? "s3" : null
   flow_log_destination_arn   = var.enable_flow_log ? module.vpc_flow_logs.s3_bucket_arn : null
-  tags                       = local.common_infra_tags
+  tags                       = local.networking_tags
 }
 
 module "vpc_flow_logs" {
   source         = "git::https://github.com/leanspace/platform-infra-modules.git//aws/networking/vpc-flow-logs?ref=main"
   s3_bucket_name = "${var.resource_prefix}-vpc-flow-logs-${var.environment}"
-  tags           = local.common_infra_tags
+  tags           = local.networking_tags
 }
 
 module "vpc_endpoints" {
@@ -61,7 +103,7 @@ module "vpc_endpoints" {
   vpc_id         = module.vpc.vpc_id
   vpc_cidr_block = module.vpc.vpc_cidr_block
   endpoints      = local.vpc_endpoints
-  tags           = local.common_infra_tags
+  tags           = local.networking_tags
 }
 
 module "vpc_lattice" {
@@ -70,7 +112,7 @@ module "vpc_lattice" {
   name               = "${var.resource_prefix}-vpc-lattice-${var.environment}"
   vpc_id             = module.vpc.vpc_id
   security_group_ids = [aws_security_group.vpc_lattice_allow_all.id]
-  tags               = local.common_infra_tags
+  tags               = local.networking_tags
 }
 
 resource "aws_security_group" "vpc_lattice_allow_all" {
@@ -91,10 +133,10 @@ resource "aws_security_group" "vpc_lattice_allow_all" {
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
   }
-  tags = local.common_infra_tags
+  tags = local.networking_tags
 }
 
-module "vault_export" {
+module "vault_export_networking" {
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [

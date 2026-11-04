@@ -1,41 +1,32 @@
-# This block defines attributes that would be commonly used across all the modules
 locals {
-  common_infra_tags = {
+  database_tags = {
     component-category = var.component_category
-    component-type     = var.component_type
+    component-type     = "database-cluster"
     environment        = var.environment
     managed-by         = "terraform"
     team               = var.team_name
   }
-}
 
-# This block extracts information from the remote state of the networking module
-data "terraform_remote_state" "networking" {
-  backend = "http"
-  config = {
-    address                = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/core/networking"
-    lock_address           = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/core/networking"
-    unlock_address         = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/core/networking"
-    lock_method            = "POST"
-    unlock_method          = "DELETE"
-    skip_cert_verification = true
-  }
+  # Previously database/db-parameter-group.tf
+  db_parameter_group_parameters = [
+    { name = "shared_preload_libraries", value = "auto_explain,pg_stat_statements,pg_hint_plan,pgaudit", apply_method = "pending-reboot" },
+    { name = "log_statement", value = "ddl", apply_method = "pending-reboot" }, # Changed to pending-reboot
+    { name = "log_connections", value = 1, apply_method = "immediate" },
+    { name = "log_disconnections", value = 1, apply_method = "immediate" },
+    { name = "log_lock_waits", value = 1, apply_method = "immediate" },
+    { name = "log_min_duration_statement", value = 5000, apply_method = "immediate" },
+    { name = "auto_explain.log_min_duration", value = 5000, apply_method = "immediate" },
+    { name = "auto_explain.log_verbose", value = 1, apply_method = "immediate" },
+    { name = "log_rotation_age", value = 1440, apply_method = "pending-reboot" },    # Changed to pending-reboot
+    { name = "log_rotation_size", value = 102400, apply_method = "pending-reboot" }, # Changed to pending-reboot
+    { name = "rds.log_retention_period", value = 10080, apply_method = "immediate" },
+    { name = "random_page_cost", value = 1, apply_method = "immediate" },
+    { name = "track_activity_query_size", value = 16384, apply_method = "pending-reboot" }, # Changed to pending-reboot
+    { name = "idle_in_transaction_session_timeout", value = 7200000, apply_method = "immediate" },
+    { name = "statement_timeout", value = 60000, apply_method = "immediate" },
+    { name = "search_path", value = "\"$user\",public", apply_method = "immediate" }
+  ]
 }
-
-data "terraform_remote_state" "kube-cluster" {
-  backend = "http"
-  config = {
-    address                = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/platform/kube-cluster"
-    lock_address           = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/platform/kube-cluster"
-    unlock_address         = "https://backend.vault.leanspace.io/v1/state/aws/${var.environment}/platform/kube-cluster"
-    lock_method            = "POST"
-    unlock_method          = "DELETE"
-    skip_cert_verification = true
-  }
-}
-
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
 
 # Re-read on every apply (not a one-time snapshot) - AWS's own rotation Lambda
 # changes this on its own schedule, and this data source always resolves the
@@ -47,15 +38,15 @@ data "aws_secretsmanager_secret_version" "db_master_password" {
 }
 
 module "postgres" {
-  depends_on = [module.db_kms_key]
+  depends_on            = [module.db_kms_key]
   source                = "git::https://github.com/leanspace/platform-infra-modules.git//aws/database?ref=main"
   aurora_name           = "${var.resource_prefix}-${var.environment}-db"
   aurora_engine_version = var.aurora_engine_version
   kms_key_id            = module.db_kms_key.key_arn
   aurora_instances      = var.aurora_instances
-  vpc_id                = data.terraform_remote_state.networking.outputs.vpc_id
+  vpc_id                = module.vpc.vpc_id
   db_subnet_group_name  = "${var.resource_prefix}-${var.environment}-db-subnet-group"
-  private_subnets       = data.terraform_remote_state.networking.outputs.private_subnets
+  private_subnets       = module.vpc.private_subnets
   security_group_rules = {
     ingress_from_services_sg = {
       type                     = "ingress"
@@ -64,7 +55,7 @@ module "postgres" {
       protocol                 = "tcp"
       description              = "Access from Services SG"
       cidr_blocks              = null
-      source_security_group_id = data.terraform_remote_state.kube-cluster.outputs.node_security_group_id
+      source_security_group_id = module.eks_cluster.node_security_group_id
     }
     egress_example = {
       type                     = "egress"
@@ -76,12 +67,12 @@ module "postgres" {
       source_security_group_id = null
     }
   }
-  security_group_tags             = local.common_infra_tags
+  security_group_tags             = local.database_tags
   final_snapshot_identifier       = "${var.resource_prefix}-${var.environment}-db-final-snapshot"
   db_cluster_parameter_group_name = "${var.resource_prefix}-${var.environment}-cluster-parameter-group"
   db_parameter_group_name         = "${var.resource_prefix}-${var.environment}-parameter-group"
   db_parameter_group_parameters   = local.db_parameter_group_parameters
-  tags                            = local.common_infra_tags
+  tags                            = local.database_tags
   cloudwatch_log_group_kms_key_id = module.db_kms_key.key_arn
 }
 
@@ -99,16 +90,16 @@ resource "aws_security_group_rule" "postgres_self_reference" {
 module "db_kms_key" {
   source          = "git::https://github.com/leanspace/platform-infra-modules.git//aws/kms?ref=main"
   kms_description = "KMS key for ${var.resource_prefix}-${var.environment} Aurora PG database cluster."
-  kms_policy = templatefile("${path.module}/kms_policy.json.tpl", {
+  kms_policy = templatefile("${path.module}/rds-kms-policy.json.tpl", {
     account_id  = data.aws_caller_identity.current.account_id
     region      = data.aws_region.current.name
     via_service = var.via_service
   })
   kms_aliases = ["${var.resource_prefix}-${var.environment}-db-key"]
-  tags        = local.common_infra_tags
+  tags        = local.database_tags
 }
 
-module "vault_export" {
+module "vault_export_database" {
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [
