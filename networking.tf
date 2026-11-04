@@ -76,7 +76,7 @@ locals {
       private_dns_enabled = true
       subnet_ids          = module.vpc[0].private_subnets
     },
-  } : {}
+  } : null
 }
 
 module "vpc" {
