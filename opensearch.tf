@@ -71,6 +71,11 @@ module "opensearch" {
 
   high_availability = var.high_availability
 
+  # Without this, nothing outside the domain's own security group can reach it
+  # at all - confirmed via a live connection test (curl from inside the EKS
+  # cluster timed out) that the module's self-referencing-only default left
+  # OpenSearch completely unreachable from the cluster it's meant to serve.
+  allowed_security_group_ids = [module.eks_cluster.node_security_group_id]
 }
 
 module "vault_export_opensearch" {
