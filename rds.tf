@@ -57,6 +57,7 @@ module "postgres" {
   aurora_engine_version = var.aurora_engine_version
   kms_key_id            = module.db_kms_key[0].key_arn
   aurora_instances      = var.aurora_instances
+  deletion_protection   = var.database_deletion_protection
   vpc_id                = local.vpc_id
   db_subnet_group_name  = "${var.resource_prefix}-${var.environment}-db-subnet-group"
   private_subnets       = local.private_subnets

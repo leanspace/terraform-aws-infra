@@ -153,6 +153,12 @@ variable "via_service" {
   default     = "rds"
 }
 
+variable "database_deletion_protection" {
+  description = "RDS deletion protection on the Aurora cluster. Defaults to true (the underlying module's own safe default) - set to false only for throwaway test environments. A real apply blocked on \"Cannot delete protected Cluster\" during a terraform destroy means this needs to be false there, or deletion protection needs disabling directly via the AWS CLI/console first."
+  type        = bool
+  default     = true
+}
+
 ########################################
 # eks
 ########################################
