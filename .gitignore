@@ -15,3 +15,8 @@ terraform.rc
 # Generated per-run, never hand-authored or committed.
 terraform.tfvars
 backend.hcl
+
+# Real VPC/subnet IDs, S3 bucket names, account IDs, etc. Kept locally for
+# testing/validation only - not pushed (this repo is public). The *.example
+# file is a template and stays tracked.
+environment-tfvars/*.tfvars
