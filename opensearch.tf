@@ -21,9 +21,9 @@ locals {
 
   # Calculate the maximum number of availability zones based on the data node count
   opensearch_instance_count     = local.opensearch_data_node_count
-  opensearch_max_subnets        = length(module.vpc.private_subnets)
+  opensearch_max_subnets        = length(local.private_subnets)
   opensearch_subnet_count       = min(local.opensearch_instance_count, local.opensearch_max_subnets)
-  opensearch_cluster_subnet_ids = slice(module.vpc.private_subnets, 0, local.opensearch_subnet_count)
+  opensearch_cluster_subnet_ids = slice(local.private_subnets, 0, local.opensearch_subnet_count)
   opensearch_tags = {
     component-category = var.component_category
     component-type     = "opensearch-cluster"
@@ -37,6 +37,7 @@ data "aws_partition" "current" {}
 
 # This block creates kms key for OpenSearch cluster
 module "opensearch_kms_key" {
+  count  = var.enable_opensearch ? 1 : 0
   source = "git::https://github.com/leanspace/terraform-aws-modules.git//kms?ref=main"
 
   kms_description = "KMS key for ${var.resource_prefix} ${var.environment} opensearch cluster."
@@ -52,16 +53,17 @@ module "opensearch_kms_key" {
 
 # This block creates the OpenSearch cluster
 module "opensearch" {
+  count  = var.enable_opensearch ? 1 : 0
   source = "git::https://github.com/leanspace/terraform-aws-modules.git//opensearch?ref=main"
 
-  vpc_id          = module.vpc.vpc_id
+  vpc_id          = local.vpc_id
   private_subnets = local.opensearch_cluster_subnet_ids
 
   cluster_name       = "${local.opensearch_name_prefix}-opensearch"
   opensearch_version = var.opensearch_version
 
   opensearch_tls_security_policy = var.opensearch_tls_security_policy
-  opensearch_encryption_key_arn  = module.opensearch_kms_key.key_arn
+  opensearch_encryption_key_arn  = module.opensearch_kms_key[0].key_arn
 
   data_node_count  = local.opensearch_data_node_count
   data_node_type   = local.opensearch_data_node_type
@@ -72,18 +74,19 @@ module "opensearch" {
 }
 
 module "vault_export_opensearch" {
+  count  = var.enable_opensearch ? 1 : 0
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/opensearch_arn"
-      data  = { value = module.opensearch.arn }
+      data  = { value = module.opensearch[0].arn }
     },
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/opensearch_endpoint"
-      data  = { value = module.opensearch.endpoint }
+      data  = { value = module.opensearch[0].endpoint }
     }
   ] : []
 }

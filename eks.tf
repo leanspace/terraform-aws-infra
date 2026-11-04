@@ -9,10 +9,6 @@ locals {
 
   cluster_name = "${var.resource_prefix}-${var.environment}-eks-cluster"
 
-  use_existing_vpc = var.vpc_id != ""
-  vpc_id           = local.use_existing_vpc ? var.vpc_id : module.vpc.vpc_id
-  private_subnets  = local.use_existing_vpc ? var.private_subnets : module.vpc.private_subnets
-
   github_deployment_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-deployment-role"
 
   extra_admin_role_arns = toset([

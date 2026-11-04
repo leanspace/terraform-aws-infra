@@ -60,13 +60,48 @@ variable "component_category" {
   default     = "platform-infrastructure"
 }
 
+variable "enable_networking" {
+  description = "Whether to create the networking module's VPC. Set to false (and provide vpc_id/private_subnets/public_subnets) when reusing an existing VPC instead - e.g. during the agnostic migration, where the VPC already exists from a CloudFormation stack and this module's own state has nothing in it."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.enable_networking || var.vpc_id != ""
+    error_message = "enable_networking is false but no vpc_id was provided - nothing would create the VPC eks/rds/opensearch need."
+  }
+}
+
+variable "enable_acm" {
+  description = "Whether to create the ACM certificate."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = !var.enable_acm || var.domain_name != ""
+    error_message = "enable_acm is true but no domain_name was provided."
+  }
+}
+
+variable "enable_database" {
+  description = "Whether to create the Aurora Postgres database."
+  type        = bool
+  default     = true
+}
+
+variable "enable_opensearch" {
+  description = "Whether to create the OpenSearch cluster."
+  type        = bool
+  default     = true
+}
+
 ########################################
 # acm
 ########################################
 
 variable "domain_name" {
-  description = "Domain name for the certificate"
+  description = "Domain name for the certificate. Required when enable_acm is true; irrelevant (leave as default) otherwise."
   type        = string
+  default     = ""
 }
 
 variable "alternative_names" {
@@ -286,8 +321,9 @@ variable "flow_log_destination_arn" {
 ########################################
 
 variable "deployment_mode" {
-  description = "The mode of deployment for the OpenSearch cluster (PROD, DEV, or CUSTOM)"
+  description = "The mode of deployment for the OpenSearch cluster (PROD, DEV, or CUSTOM). Irrelevant (leave as default) when enable_opensearch is false."
   type        = string
+  default     = "DEV"
   validation {
     condition     = contains(["PROD", "DEV", "CUSTOM"], var.deployment_mode)
     error_message = "The mode must be either 'PROD', 'DEV', or 'CUSTOM'."

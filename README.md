@@ -44,8 +44,25 @@ pending internal team sign-off on this restructuring.
 ## Environments
 
 `environment-tfvars/<environment_name>.tfvars` holds the per-environment overrides (one
-file per environment, merged across what used to be per-component tfvars). `agnostk` is
-the sandbox account; `develop` currently only carries EKS overrides.
+file per environment, merged across what used to be per-component tfvars). These are
+gitignored (real VPC/subnet IDs, bucket names, etc. in a public repo) - copy
+`environment-tfvars/example.tfvars.example` to get started. `agnostk` is the sandbox
+account; `develop` currently only carries EKS overrides.
+
+## Disabling a component
+
+`enable_networking`, `enable_acm`, `enable_database`, and `enable_opensearch` (all
+default `true`) skip creating that component entirely. This matters most for
+`enable_networking`: during the agnostic migration, `agnostk`'s VPC already exists from
+a CloudFormation stack and this root shouldn't create a second one. Set
+`enable_networking = false` and pass the existing VPC directly via `vpc_id` /
+`private_subnets` / `public_subnets` - every component that needs VPC info (`eks.tf`,
+`rds.tf`, `opensearch.tf`) resolves it through `local.vpc_id` / `local.private_subnets`
+in `common.tf`, which fall back to those variables instead of reading `module.vpc`
+directly. A validation rule enforces that `vpc_id` is set whenever
+`enable_networking = false`. EKS itself doesn't have a toggle - it's assumed to always
+be deployed - and S3 is already opt-in per bucket (see above), so it doesn't need one
+either.
 
 ## Enabling an S3 bucket
 

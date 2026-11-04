@@ -34,19 +34,21 @@ locals {
 # drifting too far. Still a point-in-time copy between applies, not a live
 # read - nothing here stays in sync between two applies.
 data "aws_secretsmanager_secret_version" "db_master_password" {
-  secret_id = module.postgres.master_user_secret_arn
+  count     = var.enable_database ? 1 : 0
+  secret_id = module.postgres[0].master_user_secret_arn
 }
 
 module "postgres" {
+  count                 = var.enable_database ? 1 : 0
   depends_on            = [module.db_kms_key]
   source                = "git::https://github.com/leanspace/terraform-aws-modules.git//database?ref=main"
   aurora_name           = "${var.resource_prefix}-${var.environment}-db"
   aurora_engine_version = var.aurora_engine_version
-  kms_key_id            = module.db_kms_key.key_arn
+  kms_key_id            = module.db_kms_key[0].key_arn
   aurora_instances      = var.aurora_instances
-  vpc_id                = module.vpc.vpc_id
+  vpc_id                = local.vpc_id
   db_subnet_group_name  = "${var.resource_prefix}-${var.environment}-db-subnet-group"
-  private_subnets       = module.vpc.private_subnets
+  private_subnets       = local.private_subnets
   security_group_rules = {
     ingress_from_services_sg = {
       type                     = "ingress"
@@ -73,21 +75,23 @@ module "postgres" {
   db_parameter_group_name         = "${var.resource_prefix}-${var.environment}-parameter-group"
   db_parameter_group_parameters   = local.db_parameter_group_parameters
   tags                            = local.database_tags
-  cloudwatch_log_group_kms_key_id = module.db_kms_key.key_arn
+  cloudwatch_log_group_kms_key_id = module.db_kms_key[0].key_arn
 }
 
 resource "aws_security_group_rule" "postgres_self_reference" {
+  count                    = var.enable_database ? 1 : 0
   depends_on               = [module.postgres]
   type                     = "ingress"
   from_port                = 5432
   to_port                  = 5432
   protocol                 = "tcp"
   description              = "Self-referencing rule"
-  security_group_id        = module.postgres.security_group_id
-  source_security_group_id = module.postgres.security_group_id
+  security_group_id        = module.postgres[0].security_group_id
+  source_security_group_id = module.postgres[0].security_group_id
 }
 
 module "db_kms_key" {
+  count           = var.enable_database ? 1 : 0
   source          = "git::https://github.com/leanspace/terraform-aws-modules.git//kms?ref=main"
   kms_description = "KMS key for ${var.resource_prefix}-${var.environment} Aurora PG database cluster."
   kms_policy = templatefile("${path.module}/rds-kms-policy.json.tpl", {
@@ -100,28 +104,29 @@ module "db_kms_key" {
 }
 
 module "vault_export_database" {
+  count  = var.enable_database ? 1 : 0
   source = "git::https://github.com/leanspace/platform-infra-modules.git//vault?ref=main"
 
   create_secrets = var.enable_vault_export ? [
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/database_cluster_arn"
-      data  = { value = module.postgres.cluster_arn }
+      data  = { value = module.postgres[0].cluster_arn }
     },
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/database_kms_key_arn"
-      data  = { value = module.db_kms_key.key_arn }
+      data  = { value = module.db_kms_key[0].key_arn }
     },
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/database_cluster_endpoint"
-      data  = { value = module.postgres.cluster_endpoint }
+      data  = { value = module.postgres[0].cluster_endpoint }
     },
     {
       mount = "leanspace"
       path  = "${var.profile}/${var.environment}/database_password"
-      data  = { value = jsondecode(data.aws_secretsmanager_secret_version.db_master_password.secret_string).password }
+      data  = { value = jsondecode(data.aws_secretsmanager_secret_version.db_master_password[0].secret_string).password }
     }
   ] : []
 }
