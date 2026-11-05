@@ -52,7 +52,7 @@ data "aws_secretsmanager_secret_version" "db_master_password" {
 module "postgres" {
   count                 = var.enable_database ? 1 : 0
   depends_on            = [module.db_kms_key]
-  source                = "git::https://github.com/leanspace/terraform-aws-modules.git//database?ref=main"
+  source                = "git::https://github.com/leanspace/terraform-aws-modules.git//database?ref=v0.1.2"
   aurora_name           = "${var.resource_prefix}-${var.environment}-db"
   aurora_engine_version = var.aurora_engine_version
   kms_key_id            = module.db_kms_key[0].key_arn
@@ -106,7 +106,7 @@ resource "aws_security_group_rule" "postgres_self_reference" {
 
 module "db_kms_key" {
   count           = var.enable_database ? 1 : 0
-  source          = "git::https://github.com/leanspace/terraform-aws-modules.git//kms?ref=main"
+  source          = "git::https://github.com/leanspace/terraform-aws-modules.git//kms?ref=v0.1.2"
   kms_description = "KMS key for ${var.resource_prefix}-${var.environment} Aurora PG database cluster."
   kms_policy = templatefile("${path.module}/rds-kms-policy.json.tpl", {
     account_id  = data.aws_caller_identity.current.account_id
