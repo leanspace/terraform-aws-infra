@@ -45,9 +45,12 @@ pending internal team sign-off on this restructuring.
 
 `environment-tfvars/<environment_name>.tfvars` holds the per-environment overrides (one
 file per environment, merged across what used to be per-component tfvars). These are
-gitignored (real VPC/subnet IDs, bucket names, etc. in a public repo) - copy
-`environment-tfvars/example.tfvars.example` to get started. `agnostk` is the sandbox
-account; `develop` currently only carries EKS overrides.
+gitignored (real VPC/subnet IDs, bucket names, etc. in a public repo) - copy one of the
+two templates to get started: `environment-tfvars/example.tfvars.example` creates
+everything fresh (its own VPC, database, OpenSearch domain), while
+`environment-tfvars/existing-network-and-data.tfvars.example` brings your own VPC/RDS/
+OpenSearch and only creates EKS. `agnostk` is the sandbox account; `develop` currently
+only carries EKS overrides.
 
 ## Disabling a component
 

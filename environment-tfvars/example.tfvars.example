@@ -22,22 +22,11 @@ deployment_mode = "DEV" # PROD | DEV | CUSTOM
 # eks
 ########################################
 
-# Leave vpc_id/private_subnets/public_subnets unset to have this root create
-# its own VPC (see networking.tf). Set them, as below, to deploy into an
-# existing VPC instead (e.g. one created outside Terraform).
-vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
-
-private_subnets = [
-  "subnet-xxxxxxxxxxxxxxxxx",
-  "subnet-xxxxxxxxxxxxxxxxx",
-  "subnet-xxxxxxxxxxxxxxxxx",
-]
-
-public_subnets = [
-  "subnet-xxxxxxxxxxxxxxxxx",
-  "subnet-xxxxxxxxxxxxxxxxx",
-  "subnet-xxxxxxxxxxxxxxxxx",
-]
+# This example creates everything fresh (networking, database, opensearch, acm
+# all default to enabled), including this root's own VPC - so vpc_id/
+# private_subnets/public_subnets are left unset here. See
+# existing-network-and-data.tfvars.example instead for bringing your own VPC/
+# RDS/OpenSearch and only creating EKS.
 
 # Buckets the services/lambda IRSA role gets read/write access to. Leave empty
 # to skip creating that role entirely.

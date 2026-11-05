@@ -1,0 +1,72 @@
+# Template for an environment where the VPC, Aurora database, and OpenSearch
+# domain already exist outside this root (hand-created, managed by a different
+# Terraform root, or inherited from a prior setup) - this root only creates the
+# EKS cluster (and optionally S3 buckets/ACM, left off below for a clean
+# EKS-only story). Copy this file, rename it to the real environment name, and
+# fill in real values. See the plain example.tfvars.example instead for the
+# "create everything fresh" case.
+
+########################################
+# networking
+########################################
+
+enable_networking = false # no VPC created here - using the existing one below
+
+########################################
+# database / opensearch / acm
+########################################
+
+enable_database   = false # Aurora already exists elsewhere - not managed by this root
+enable_opensearch = false # same for the OpenSearch domain
+enable_acm        = false # set true + domain_name below if this environment also needs a cert
+
+########################################
+# eks
+########################################
+
+# Required when enable_networking is false (validated) - the existing VPC/
+# subnets eks.tf (and, if enabled, database/opensearch) resolve through
+# local.vpc_id/local.private_subnets instead of creating their own.
+vpc_id = "vpc-xxxxxxxxxxxxxxxxx"
+
+private_subnets = [
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-xxxxxxxxxxxxxxxxx",
+]
+
+public_subnets = [
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-xxxxxxxxxxxxxxxxx",
+  "subnet-xxxxxxxxxxxxxxxxx",
+]
+
+# Buckets the services/lambda IRSA role gets read/write access to. Leave empty
+# to skip creating that role entirely - works the same whether or not those
+# buckets are managed by this root's s3.tf (see its own enabled-by-default-off
+# s3_buckets variable).
+services_s3_bucket_names = []
+
+cluster_version                      = "1.36"
+team_name                            = "silver"
+vpc_cni_addon_version                = "v1.22.4-eksbuild.8"
+kube_proxy_addon_version             = "v1.36.0-eksbuild.55"
+eks_pod_identity_agent_addon_version = "v1.4.1-eksbuild.3"
+coredns_addon_version                = "v1.14.3-eksbuild.16"
+ebs_addon_version                    = "v1.65.0-eksbuild.2"
+
+# "system" is the only required node group (untainted pool for CoreDNS, CSI,
+# ALB controller, and cluster-autoscaler - outputs asg_name/min_nodes/
+# max_nodes read this key, don't rename or omit it). Add more groups
+# following the same shape as needed.
+node_groups = {
+  system = {
+    minimum_node_count  = 1
+    maximum_node_count  = 2
+    desired_node_count  = 2
+    node_instance_types = ["m6a.xlarge"]
+    node_capacity_type  = "ON_DEMAND"
+  }
+}
+
+node_security_group_tags = {}
