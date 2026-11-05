@@ -19,12 +19,11 @@ below), and running Terraform directly:
 
 ```bash
 terraform init \
-  -backend-config="address=https://backend.vault.leanspace.io/v1/state/aws/<environment_name>/platform/infra" \
-  -backend-config="lock_address=https://backend.vault.leanspace.io/v1/lock/aws/<environment_name>/platform/infra" \
-  -backend-config="unlock_address=https://backend.vault.leanspace.io/v1/lock/aws/<environment_name>/platform/infra" \
+  -backend-config="address=<your backend address>/aws/<environment_name>/platform/infra" \
+  -backend-config="lock_address=<your backend address>/aws/<environment_name>/platform/infra" \
+  -backend-config="unlock_address=<your backend address>/aws/<environment_name>/platform/infra" \
   -backend-config="lock_method=POST" \
-  -backend-config="unlock_method=DELETE" \
-  -backend-config="skip_cert_verification=true"
+  -backend-config="unlock_method=DELETE"
 
 terraform apply \
   -var="environment=<environment_name>" \

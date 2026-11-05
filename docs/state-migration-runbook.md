@@ -5,7 +5,7 @@ far (see the root README). No `terraform state mv` has been run against the real
 backend. This doc is the plan for doing that, starting with the `agnostk` sandbox
 account before touching `develop`/`demo`/`prod`.
 
-Requires `VAULT_ADDR` + `VAULT_TOKEN` (for the `https://backend.vault.leanspace.io`
+Requires `VAULT_ADDR` + `VAULT_TOKEN` (for the `<your-state-backend>`
 HTTP backend) and AWS credentials for the `agnostk` account. Run everything from a
 scratch directory, not this repo's working tree, so a mistake can't corrupt the actual
 `.tf` files.
@@ -56,9 +56,9 @@ terraform {
 EOF
 
 terraform init -reconfigure \
-  -backend-config="address=https://backend.vault.leanspace.io/v1/state/aws/agnostk/<layer>/<component>" \
-  -backend-config="lock_address=https://backend.vault.leanspace.io/v1/lock/aws/agnostk/<layer>/<component>" \
-  -backend-config="unlock_address=https://backend.vault.leanspace.io/v1/lock/aws/agnostk/<layer>/<component>" \
+  -backend-config="address=<your-state-backend>/v1/state/aws/agnostk/<layer>/<component>" \
+  -backend-config="lock_address=<your-state-backend>/v1/lock/aws/agnostk/<layer>/<component>" \
+  -backend-config="unlock_address=<your-state-backend>/v1/lock/aws/agnostk/<layer>/<component>" \
   -backend-config="lock_method=POST" \
   -backend-config="unlock_method=DELETE" \
   -backend-config="skip_cert_verification=true"
@@ -101,9 +101,9 @@ Pick the new path with the team (not yet decided - placeholder below). Then:
 ```bash
 cd /path/to/terraform-aws-infra
 terraform init -reconfigure \
-  -backend-config="address=https://backend.vault.leanspace.io/v1/state/aws/agnostk/platform/infra" \
-  -backend-config="lock_address=https://backend.vault.leanspace.io/v1/lock/aws/agnostk/platform/infra" \
-  -backend-config="unlock_address=https://backend.vault.leanspace.io/v1/lock/aws/agnostk/platform/infra" \
+  -backend-config="address=<your-state-backend>/v1/state/aws/agnostk/platform/infra" \
+  -backend-config="lock_address=<your-state-backend>/v1/lock/aws/agnostk/platform/infra" \
+  -backend-config="unlock_address=<your-state-backend>/v1/lock/aws/agnostk/platform/infra" \
   -backend-config="lock_method=POST" \
   -backend-config="unlock_method=DELETE" \
   -backend-config="skip_cert_verification=true"
