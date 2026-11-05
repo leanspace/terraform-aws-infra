@@ -10,8 +10,8 @@ OpenSearch, and S3, as a **single Terraform root with a single state**.
 ## Usage
 
 This is a **deployable root** (its own state, one per environment), not a typical reusable
-module - clone the repo, add an `environment-tfvars/<environment_name>.tfvars` file (see
-[Environments](#environments) below), then:
+module - clone the repo, add an `environment-tfvars/<environment_name>.tfvars` file (copy
+one of the `.tfvars.example` templates in that directory to get started), then:
 
 ```bash
 terraform init \
@@ -27,38 +27,6 @@ terraform apply \
   -var="aws_region=eu-central-1" \
   -var-file="environment-tfvars/<environment_name>.tfvars"
 ```
-
-## Structure
-
-One file per component, each calling the shared modules in
-[platform-infra-modules](https://github.com/leanspace/platform-infra-modules) directly (no
-local wrapper module in between), all sharing a single state - components reference each
-other's resources directly (e.g. `module.vpc.vpc_id`) instead of a separate state per
-component:
-
-| File | Component |
-| --- | --- |
-| `acm.tf` | ACM certificate |
-| `rds.tf` | Aurora Postgres + its KMS key (`rds-kms-policy.json.tpl`) |
-| `eks.tf` | EKS cluster, node groups, addons, IRSA roles |
-| `networking.tf` | VPC, subnets, flow logs, endpoints, VPC Lattice |
-| `opensearch.tf` | OpenSearch domain + its KMS key (`opensearch-kms-policy.json.tpl`) |
-| `s3.tf` | Platform S3 buckets (toggleable, disabled by default) |
-
-Plus root-level `variables.tf`, `outputs.tf`, `versions.tf` (required providers + the
-Vault-backed HTTP backend), `provider.tf`, and `common.tf` (data sources shared by more
-than one component).
-
-## Environments
-
-`environment-tfvars/<environment_name>.tfvars` holds the per-environment overrides (one
-file per environment, merged across what used to be per-component tfvars). These are
-gitignored (real VPC/subnet IDs, bucket names, etc. in a public repo) - copy one of the
-two templates to get started: `environment-tfvars/example.tfvars.example` creates
-everything fresh (its own VPC, database, OpenSearch domain), while
-`environment-tfvars/existing-network-and-data.tfvars.example` brings your own VPC/RDS/
-OpenSearch and only creates EKS. `agnostk` is the sandbox account; `develop` currently
-only carries EKS overrides.
 
 ## Disabling a component
 
