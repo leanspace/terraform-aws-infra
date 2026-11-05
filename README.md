@@ -30,18 +30,20 @@ terraform apply \
 
 ## Disabling a component
 
-`enable_networking`, `enable_acm`, `enable_database`, and `enable_opensearch` (all
-default `true`) skip creating that component entirely. This matters most for
-`enable_networking`: during the agnostic migration, `agnostk`'s VPC already exists from
-a CloudFormation stack and this root shouldn't create a second one. Set
-`enable_networking = false` and pass the existing VPC directly via `vpc_id` /
-`private_subnets` / `public_subnets` - every component that needs VPC info (`eks.tf`,
-`rds.tf`, `opensearch.tf`) resolves it through `local.vpc_id` / `local.private_subnets`
-in `common.tf`, which fall back to those variables instead of reading `module.vpc`
-directly. A validation rule enforces that `vpc_id` is set whenever
-`enable_networking = false`. EKS itself doesn't have a toggle - it's assumed to always
-be deployed - and S3 is already opt-in per bucket (see above), so it doesn't need one
-either.
+| Variable | Default | Skips |
+| --- | --- | --- |
+| `enable_networking` | `true` | VPC creation |
+| `enable_acm` | `true` | ACM certificate |
+| `enable_database` | `true` | Aurora Postgres |
+| `enable_opensearch` | `true` | OpenSearch domain |
+
+`enable_networking` matters most: set it to `false` and pass an existing VPC via `vpc_id` /
+`private_subnets` / `public_subnets` to reuse one instead of creating a new one (e.g.
+migrating into an account whose VPC already exists from elsewhere) - a validation rule
+enforces that `vpc_id` is set whenever `enable_networking` is `false`.
+
+EKS has no toggle (always deployed), and S3 is already opt-in per bucket (see below), so
+neither needs one.
 
 ## Enabling an S3 bucket
 
