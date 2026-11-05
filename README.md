@@ -30,12 +30,10 @@ terraform apply \
 
 ## Disabling a component
 
-| Variable | Default | Skips |
-| --- | --- | --- |
-| `enable_networking` | `true` | VPC creation |
-| `enable_acm` | `true` | ACM certificate |
-| `enable_database` | `true` | Aurora Postgres |
-| `enable_opensearch` | `true` | OpenSearch domain |
+- `enable_networking` (default `true`) - skips VPC creation
+- `enable_acm` (default `true`) - skips the ACM certificate
+- `enable_database` (default `true`) - skips Aurora Postgres
+- `enable_opensearch` (default `true`) - skips the OpenSearch domain
 
 `enable_networking` matters most: set it to `false` and pass an existing VPC via `vpc_id` /
 `private_subnets` / `public_subnets` to reuse one instead of creating a new one (e.g.
