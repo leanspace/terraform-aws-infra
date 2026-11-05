@@ -226,7 +226,7 @@ variable "eks_admin_principal_arns" {
 }
 
 variable "enable_github_eks_deploy_role" {
-  description = "Create the leanspace-<env>-github-eks-deploy role (GitHub Actions OIDC, eks:DescribeCluster + cluster admin) used by platform-delivery's deploy-to-dev.yml."
+  description = "Create the `leanspace-<env>-github-eks-deploy` role (GitHub Actions OIDC, eks:DescribeCluster + cluster admin) used by platform-delivery's deploy-to-dev.yml."
   type        = bool
   default     = false
 }
@@ -283,7 +283,7 @@ variable "retention_in_days" {
 
 variable "services_s3_bucket_names" {
   description = <<-EOT
-    S3 bucket names the services/lambda IRSA role (leanspace-<env>-services-s3-access)
+    S3 bucket names the services/lambda IRSA role (`leanspace-<env>-services-s3-access`)
     is granted read/write on. Bucket names differ per environment/AWS account (e.g.
     buckets reused from an existing ECS environment during a migration), so this must
     be set explicitly per environment - there is no sensible shared default. Leave as
@@ -295,13 +295,13 @@ variable "services_s3_bucket_names" {
 }
 
 variable "enable_github_deployment_role_admin_access" {
-  description = "Whether to grant arn:aws:iam::<account_id>:role/github-deployment-role EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal."
+  description = "Whether to grant `arn:aws:iam::<account_id>:role/github-deployment-role` EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal."
   type        = bool
   default     = true
 }
 
 variable "node_security_group_tags" {
-  description = "Extra node security group tags (null value removes a tag), passed to the cluster module. Use { \"kubernetes.io/cluster/<cluster_name>\" = null } so the AWS Load Balancer Controller sees a single cluster-tagged SG per pod ENI."
+  description = "Extra node security group tags (null value removes a tag), passed to the cluster module. Use `{ \"kubernetes.io/cluster/<cluster_name>\" = null }` so the AWS Load Balancer Controller sees a single cluster-tagged SG per pod ENI."
   type        = map(string)
   default     = {}
 }

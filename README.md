@@ -1,7 +1,64 @@
 # terraform-aws-infra
 
+[![Terraform Registry](https://img.shields.io/badge/terraform-registry-7B42BC?logo=terraform&logoColor=white)](https://registry.terraform.io/modules/leanspace/infra/aws/latest)
+[![Release](https://github.com/leanspace/terraform-aws-infra/actions/workflows/release.yml/badge.svg)](https://github.com/leanspace/terraform-aws-infra/actions/workflows/release.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 AWS infrastructure for the Leanspace platform: ACM, Aurora Postgres, EKS, networking (VPC),
 OpenSearch, and S3, as a **single Terraform root with a single state**.
+
+## Usage
+
+This repo is published to the
+[Terraform Registry](https://registry.terraform.io/modules/leanspace/infra/aws/latest) as
+`leanspace/infra/aws`, but it's a **deployable root**, not a typical reusable module - it's
+meant to be applied directly (its own state, one per environment), not called as a `module`
+block from another configuration. In practice, that means cloning this repo, dropping an
+`environment-tfvars/<environment_name>.tfvars` file in (see [Environments](#environments)
+below), and running Terraform directly:
+
+```bash
+terraform init \
+  -backend-config="address=https://backend.vault.leanspace.io/v1/state/aws/<environment_name>/platform/infra" \
+  -backend-config="lock_address=https://backend.vault.leanspace.io/v1/lock/aws/<environment_name>/platform/infra" \
+  -backend-config="unlock_address=https://backend.vault.leanspace.io/v1/lock/aws/<environment_name>/platform/infra" \
+  -backend-config="lock_method=POST" \
+  -backend-config="unlock_method=DELETE" \
+  -backend-config="skip_cert_verification=true"
+
+terraform apply \
+  -var="environment=<environment_name>" \
+  -var="profile=leanspace-aws" \
+  -var="aws_region=eu-central-1" \
+  -var-file="environment-tfvars/<environment_name>.tfvars"
+```
+
+The registry's own convention (calling this as a `module` block) works mechanically too,
+if you ever have a reason to:
+
+```hcl
+module "infra" {
+  source  = "leanspace/infra/aws"
+  version = "~> 0.1"
+
+  environment                          = "agnostk"
+  profile                              = "leanspace-aws"
+  aws_region                           = "eu-central-1"
+  kube_proxy_addon_version             = "v1.36.0-eksbuild.55"
+  vpc_cni_addon_version                = "v1.22.4-eksbuild.8"
+  eks_pod_identity_agent_addon_version = "v1.4.1-eksbuild.3"
+
+  node_groups = {
+    system = {
+      minimum_node_count  = 1
+      maximum_node_count  = 2
+      desired_node_count  = 2
+      node_instance_types = ["m6a.xlarge"]
+      node_capacity_type  = "ON_DEMAND"
+    }
+  }
+}
+```
 
 ## Structure
 
@@ -204,8 +261,8 @@ s3_buckets = {
 | <a name="input_enable_database"></a> [enable\_database](#input\_enable\_database) | Whether to create the Aurora Postgres database. | `bool` | `true` | no |
 | <a name="input_enable_flow_log"></a> [enable\_flow\_log](#input\_enable\_flow\_log) | Whether or not to enable VPC Flow Logs | `bool` | `true` | no |
 | <a name="input_enable_github_deployment_role"></a> [enable\_github\_deployment\_role](#input\_enable\_github\_deployment\_role) | Whether to create github-deployment-role: account-wide AdministratorAccess via GitHub Actions OIDC, restricted to github\_deployment\_role\_subjects (required when true - see its own validation). This role (and the GitHub OIDC provider it and github-eks-deploy both share) previously came from this account's own bootstrap process outside this repo - not present in a freshly-created account until created here. Defaults to false, same as enable\_github\_eks\_deploy\_role, since every existing environment's tfvars predates this variable and doesn't set github\_deployment\_role\_subjects. | `bool` | `false` | no |
-| <a name="input_enable_github_deployment_role_admin_access"></a> [enable\_github\_deployment\_role\_admin\_access](#input\_enable\_github\_deployment\_role\_admin\_access) | Whether to grant arn:aws:iam::<account\_id>:role/github-deployment-role EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal. | `bool` | `true` | no |
-| <a name="input_enable_github_eks_deploy_role"></a> [enable\_github\_eks\_deploy\_role](#input\_enable\_github\_eks\_deploy\_role) | Create the leanspace-<env>-github-eks-deploy role (GitHub Actions OIDC, eks:DescribeCluster + cluster admin) used by platform-delivery's deploy-to-dev.yml. | `bool` | `false` | no |
+| <a name="input_enable_github_deployment_role_admin_access"></a> [enable\_github\_deployment\_role\_admin\_access](#input\_enable\_github\_deployment\_role\_admin\_access) | Whether to grant `arn:aws:iam::<account_id>:role/github-deployment-role` EKS cluster-admin access. That role comes from this account's own bootstrap process (outside this repo) and may not exist in a freshly-created account - set to false there instead of letting the access entry fail on a nonexistent principal. | `bool` | `true` | no |
+| <a name="input_enable_github_eks_deploy_role"></a> [enable\_github\_eks\_deploy\_role](#input\_enable\_github\_eks\_deploy\_role) | Create the `leanspace-<env>-github-eks-deploy` role (GitHub Actions OIDC, eks:DescribeCluster + cluster admin) used by platform-delivery's deploy-to-dev.yml. | `bool` | `false` | no |
 | <a name="input_enable_networking"></a> [enable\_networking](#input\_enable\_networking) | Whether to create the networking module's VPC. Set to false (and provide vpc\_id/private\_subnets/public\_subnets) when reusing an existing VPC instead - e.g. during the agnostic migration, where the VPC already exists from a CloudFormation stack and this module's own state has nothing in it. | `bool` | `true` | no |
 | <a name="input_enable_opensearch"></a> [enable\_opensearch](#input\_enable\_opensearch) | Whether to create the OpenSearch cluster. | `bool` | `true` | no |
 | <a name="input_enable_vault_export"></a> [enable\_vault\_export](#input\_enable\_vault\_export) | Whether components export their important ARNs to Vault | `bool` | `true` | no |
@@ -221,7 +278,7 @@ s3_buckets = {
 | <a name="input_name"></a> [name](#input\_name) | Name to be used on all the networking resources as identifier | `string` | `"leanspace-vpc"` | no |
 | <a name="input_node_groups"></a> [node\_groups](#input\_node\_groups) | Map of EKS managed node groups to create. Keys are node group names. A 'system' pool is required (untainted add-ons + outputs asg\_name/min\_nodes/max\_nodes). | <pre>map(object({<br/>    minimum_node_count  = number<br/>    maximum_node_count  = number<br/>    desired_node_count  = number<br/>    node_instance_types = list(string)<br/>    node_capacity_type  = string<br/>    subnet_ids          = optional(list(string), [])<br/>    extra_labels        = optional(map(string), {})<br/>    taints = optional(list(object({<br/>      key    = string<br/>      value  = string<br/>      effect = string<br/>    })), [])<br/>    # Extra node role policies (key => ARN). null = module default (SSM + standard EKS worker/CNI/ECR).<br/>    iam_role_additional_policies = optional(map(string))<br/>  }))</pre> | n/a | yes |
 | <a name="input_node_imds_hop_limit"></a> [node\_imds\_hop\_limit](#input\_node\_imds\_hop\_limit) | IMDSv2 hop limit on all node groups. 1 blocks pods from reaching the node role through IMDS; 2 is the current behaviour. Changing it rolls every node group | `number` | `2` | no |
-| <a name="input_node_security_group_tags"></a> [node\_security\_group\_tags](#input\_node\_security\_group\_tags) | Extra node security group tags (null value removes a tag), passed to the cluster module. Use { "kubernetes.io/cluster/<cluster\_name>" = null } so the AWS Load Balancer Controller sees a single cluster-tagged SG per pod ENI. | `map(string)` | `{}` | no |
+| <a name="input_node_security_group_tags"></a> [node\_security\_group\_tags](#input\_node\_security\_group\_tags) | Extra node security group tags (null value removes a tag), passed to the cluster module. Use `{ "kubernetes.io/cluster/<cluster_name>" = null }` so the AWS Load Balancer Controller sees a single cluster-tagged SG per pod ENI. | `map(string)` | `{}` | no |
 | <a name="input_opensearch_tls_security_policy"></a> [opensearch\_tls\_security\_policy](#input\_opensearch\_tls\_security\_policy) | TLS security policy for OpenSearch | `string` | `"Policy-Min-TLS-1-2-2019-07"` | no |
 | <a name="input_opensearch_version"></a> [opensearch\_version](#input\_opensearch\_version) | Version of OpenSearch to deploy | `string` | `"OpenSearch_2.11"` | no |
 | <a name="input_private_subnets"></a> [private\_subnets](#input\_private\_subnets) | Existing private subnet IDs for the EKS control plane and node groups. Required when vpc\_id is set. | `list(string)` | `[]` | no |
@@ -230,7 +287,7 @@ s3_buckets = {
 | <a name="input_resource_prefix"></a> [resource\_prefix](#input\_resource\_prefix) | The prefix for the resources | `string` | `"leanspace"` | no |
 | <a name="input_retention_in_days"></a> [retention\_in\_days](#input\_retention\_in\_days) | Retention period for CloudWatch log groups in days | `number` | `90` | no |
 | <a name="input_s3_buckets"></a> [s3\_buckets](#input\_s3\_buckets) | Map of S3 buckets to manage, keyed by a short logical name. Several keys<br/>are already known (the buckets the platform uses today, see<br/>local.known\_bucket\_names in s3.tf) and default to disabled; reusing one<br/>of those keys here overrides its fields (most commonly just<br/>`enabled = true`). Any other key creates a brand-new, ad-hoc bucket the<br/>same way. Every bucket, known or ad-hoc, defaults to disabled unless<br/>explicitly enabled.<br/><br/>versioning\_enabled is left unset (null) rather than defaulting here so<br/>that enabling a known bucket (e.g. `{ enabled = true }`) doesn't silently<br/>override that bucket's category-appropriate default from<br/>local.known\_bucket\_overrides in s3.tf -- set it explicitly to override<br/>that default either way. | <pre>map(object({<br/>    enabled            = optional(bool, false)<br/>    name               = optional(string)<br/>    versioning_enabled = optional(bool)<br/>    force_destroy      = optional(bool, false)<br/>    sse_algorithm      = optional(string, "aws:kms")<br/>    kms_key_arn        = optional(string)<br/>    lifecycle_rule     = optional(any, [])<br/>    policy_json        = optional(string)<br/>    tags               = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
-| <a name="input_services_s3_bucket_names"></a> [services\_s3\_bucket\_names](#input\_services\_s3\_bucket\_names) | S3 bucket names the services/lambda IRSA role (leanspace-<env>-services-s3-access)<br/>is granted read/write on. Bucket names differ per environment/AWS account (e.g.<br/>buckets reused from an existing ECS environment during a migration), so this must<br/>be set explicitly per environment - there is no sensible shared default. Leave as<br/>the default empty list to skip creating the role entirely (e.g. environments that<br/>don't need it yet, or where S3 access is still handled another way). | `list(string)` | `[]` | no |
+| <a name="input_services_s3_bucket_names"></a> [services\_s3\_bucket\_names](#input\_services\_s3\_bucket\_names) | S3 bucket names the services/lambda IRSA role (`leanspace-<env>-services-s3-access`)<br/>is granted read/write on. Bucket names differ per environment/AWS account (e.g.<br/>buckets reused from an existing ECS environment during a migration), so this must<br/>be set explicitly per environment - there is no sensible shared default. Leave as<br/>the default empty list to skip creating the role entirely (e.g. environments that<br/>don't need it yet, or where S3 access is still handled another way). | `list(string)` | `[]` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
 | <a name="input_team_name"></a> [team\_name](#input\_team\_name) | Team name tag applied to component resources | `string` | `"silver"` | no |
 | <a name="input_tfstate_path"></a> [tfstate\_path](#input\_tfstate\_path) | Path to the local backend terraform state file (local-backend only) | `string` | `"null"` | no |
@@ -286,3 +343,7 @@ s3_buckets = {
 | <a name="output_vpc_id"></a> [vpc\_id](#output\_vpc\_id) | The ID of the VPC - either the one this root created, or the existing one passed in via var.vpc\_id when enable\_networking is false. |
 | <a name="output_vpc_name"></a> [vpc\_name](#output\_vpc\_name) | The name of the VPC specified as argument to this module |
 <!-- END_TF_DOCS -->
+
+## License
+
+[MIT](LICENSE)
