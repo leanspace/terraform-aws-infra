@@ -9,13 +9,9 @@ OpenSearch, and S3, as a **single Terraform root with a single state**.
 
 ## Usage
 
-This repo is published to the
-[Terraform Registry](https://registry.terraform.io/modules/leanspace/infra/aws/latest) as
-`leanspace/infra/aws`, but it's a **deployable root**, not a typical reusable module - it's
-meant to be applied directly (its own state, one per environment), not called as a `module`
-block from another configuration. In practice, that means cloning this repo, dropping an
-`environment-tfvars/<environment_name>.tfvars` file in (see [Environments](#environments)
-below), and running Terraform directly:
+This is a **deployable root** (its own state, one per environment), not a typical reusable
+module - clone the repo, add an `environment-tfvars/<environment_name>.tfvars` file (see
+[Environments](#environments) below), then:
 
 ```bash
 terraform init \
@@ -32,39 +28,13 @@ terraform apply \
   -var-file="environment-tfvars/<environment_name>.tfvars"
 ```
 
-The registry's own convention (calling this as a `module` block) works mechanically too,
-if you ever have a reason to:
-
-```hcl
-module "infra" {
-  source  = "leanspace/infra/aws"
-  version = "~> 0.1"
-
-  environment                          = "agnostk"
-  profile                              = "leanspace-aws"
-  aws_region                           = "eu-central-1"
-  kube_proxy_addon_version             = "v1.36.0-eksbuild.55"
-  vpc_cni_addon_version                = "v1.22.4-eksbuild.8"
-  eks_pod_identity_agent_addon_version = "v1.4.1-eksbuild.3"
-
-  node_groups = {
-    system = {
-      minimum_node_count  = 1
-      maximum_node_count  = 2
-      desired_node_count  = 2
-      node_instance_types = ["m6a.xlarge"]
-      node_capacity_type  = "ON_DEMAND"
-    }
-  }
-}
-```
-
 ## Structure
 
-Each component calls the shared modules in
-[platform-infra-modules](https://github.com/leanspace/platform-infra-modules) directly -
-there is no local wrapper module per component. One file per component, all in this one
-root:
+One file per component, each calling the shared modules in
+[platform-infra-modules](https://github.com/leanspace/platform-infra-modules) directly (no
+local wrapper module in between), all sharing a single state - components reference each
+other's resources directly (e.g. `module.vpc.vpc_id`) instead of a separate state per
+component:
 
 | File | Component |
 | --- | --- |
@@ -78,24 +48,6 @@ root:
 Plus root-level `variables.tf`, `outputs.tf`, `versions.tf` (required providers + the
 Vault-backed HTTP backend), `provider.tf`, and `common.tf` (data sources shared by more
 than one component).
-
-Components reference each other's resources directly (e.g. `rds.tf` uses
-`module.vpc.vpc_id` and `module.eks_cluster.node_security_group_id`) instead of reading
-another root's state over `terraform_remote_state` - there's only one state now.
-
-## This used to be 6 separate roots
-
-Until recently, `acm/`, `database/`, `eks/`, `networking/`, `opensearch/`, and `s3/` were
-each an independently-applied Terraform root (own state, own CI job in
-`platform-infrastructure`'s `deploy-to-aws.yml`), stitched together with
-`terraform_remote_state` reads. They've been consolidated into this single root. See
-[`docs/state-migration-runbook.md`](./docs/state-migration-runbook.md) for the plan to
-migrate each environment's existing state into the new combined state - **no live state
-has been migrated yet**; this repo is file-level-only until that runbook is run.
-
-The CI workflow that applies these components (`platform-infrastructure`'s
-`deploy-to-aws.yml`, currently 6 separate jobs) has **not** been updated yet - that's
-pending internal team sign-off on this restructuring.
 
 ## Environments
 
@@ -175,29 +127,29 @@ s3_buckets = {
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
-| <a name="module_agnostk_certificate"></a> [agnostk\_certificate](#module\_agnostk\_certificate) | git::https://github.com/leanspace/terraform-aws-modules.git//acm | main |
-| <a name="module_bucket"></a> [bucket](#module\_bucket) | git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket | main |
-| <a name="module_cluster_autoscaler_irsa_role"></a> [cluster\_autoscaler\_irsa\_role](#module\_cluster\_autoscaler\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | main |
-| <a name="module_db_kms_key"></a> [db\_kms\_key](#module\_db\_kms\_key) | git::https://github.com/leanspace/terraform-aws-modules.git//kms | main |
-| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/cluster | main |
-| <a name="module_eks_control_plane_logs"></a> [eks\_control\_plane\_logs](#module\_eks\_control\_plane\_logs) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/logs | main |
-| <a name="module_eks_managed_node_group"></a> [eks\_managed\_node\_group](#module\_eks\_managed\_node\_group) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/node-group | main |
-| <a name="module_install_coredns_addon"></a> [install\_coredns\_addon](#module\_install\_coredns\_addon) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons | main |
-| <a name="module_install_ebscsi_addon"></a> [install\_ebscsi\_addon](#module\_install\_ebscsi\_addon) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons | main |
-| <a name="module_opensearch"></a> [opensearch](#module\_opensearch) | git::https://github.com/leanspace/terraform-aws-modules.git//opensearch | main |
-| <a name="module_opensearch_kms_key"></a> [opensearch\_kms\_key](#module\_opensearch\_kms\_key) | git::https://github.com/leanspace/terraform-aws-modules.git//kms | main |
-| <a name="module_postgres"></a> [postgres](#module\_postgres) | git::https://github.com/leanspace/terraform-aws-modules.git//database | main |
-| <a name="module_services_s3_irsa_role"></a> [services\_s3\_irsa\_role](#module\_services\_s3\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | main |
+| <a name="module_agnostk_certificate"></a> [agnostk\_certificate](#module\_agnostk\_certificate) | git::https://github.com/leanspace/terraform-aws-modules.git//acm | v0.1.2 |
+| <a name="module_bucket"></a> [bucket](#module\_bucket) | git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket | v0.1.2 |
+| <a name="module_cluster_autoscaler_irsa_role"></a> [cluster\_autoscaler\_irsa\_role](#module\_cluster\_autoscaler\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | v0.1.2 |
+| <a name="module_db_kms_key"></a> [db\_kms\_key](#module\_db\_kms\_key) | git::https://github.com/leanspace/terraform-aws-modules.git//kms | v0.1.2 |
+| <a name="module_eks_cluster"></a> [eks\_cluster](#module\_eks\_cluster) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/cluster | v0.1.2 |
+| <a name="module_eks_control_plane_logs"></a> [eks\_control\_plane\_logs](#module\_eks\_control\_plane\_logs) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/logs | v0.1.2 |
+| <a name="module_eks_managed_node_group"></a> [eks\_managed\_node\_group](#module\_eks\_managed\_node\_group) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/node-group | v0.1.2 |
+| <a name="module_install_coredns_addon"></a> [install\_coredns\_addon](#module\_install\_coredns\_addon) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons | v0.1.2 |
+| <a name="module_install_ebscsi_addon"></a> [install\_ebscsi\_addon](#module\_install\_ebscsi\_addon) | git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons | v0.1.2 |
+| <a name="module_opensearch"></a> [opensearch](#module\_opensearch) | git::https://github.com/leanspace/terraform-aws-modules.git//opensearch | v0.1.2 |
+| <a name="module_opensearch_kms_key"></a> [opensearch\_kms\_key](#module\_opensearch\_kms\_key) | git::https://github.com/leanspace/terraform-aws-modules.git//kms | v0.1.2 |
+| <a name="module_postgres"></a> [postgres](#module\_postgres) | git::https://github.com/leanspace/terraform-aws-modules.git//database | v0.1.2 |
+| <a name="module_services_s3_irsa_role"></a> [services\_s3\_irsa\_role](#module\_services\_s3\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | v0.1.2 |
 | <a name="module_vault_export_acm"></a> [vault\_export\_acm](#module\_vault\_export\_acm) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_database"></a> [vault\_export\_database](#module\_vault\_export\_database) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_eks"></a> [vault\_export\_eks](#module\_vault\_export\_eks) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_networking"></a> [vault\_export\_networking](#module\_vault\_export\_networking) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_opensearch"></a> [vault\_export\_opensearch](#module\_vault\_export\_opensearch) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_s3"></a> [vault\_export\_s3](#module\_vault\_export\_s3) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
-| <a name="module_vpc"></a> [vpc](#module\_vpc) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc | main |
-| <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints | main |
-| <a name="module_vpc_flow_logs"></a> [vpc\_flow\_logs](#module\_vpc\_flow\_logs) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs | main |
-| <a name="module_vpc_lattice"></a> [vpc\_lattice](#module\_vpc\_lattice) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-lattice | main |
+| <a name="module_vpc"></a> [vpc](#module\_vpc) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc | v0.1.2 |
+| <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints | v0.1.2 |
+| <a name="module_vpc_flow_logs"></a> [vpc\_flow\_logs](#module\_vpc\_flow\_logs) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs | v0.1.2 |
+| <a name="module_vpc_lattice"></a> [vpc\_lattice](#module\_vpc\_lattice) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-lattice | v0.1.2 |
 
 ## Resources
 
