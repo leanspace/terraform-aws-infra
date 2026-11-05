@@ -1,0 +1,50 @@
+name: Release
+
+# Every merge to main gets an auto-incrementing patch tag + GitHub release
+# (same scheme as terraform-aws-modules' tag-release.yml - see its comment on
+# why patch-only, no Conventional Commits parsing).
+#
+# Terraform Public Registry note: this does NOT publish anything by itself.
+# There is no API call that "publishes a release" to registry.terraform.io -
+# publishing is a one-time manual step (sign in at registry.terraform.io with
+# GitHub, "Publish" -> "Module", select this repo) that links the repo to the
+# registry. Once that link exists, the registry passively watches this repo
+# for new vX.Y.Z-tagged releases and lists them automatically - this workflow
+# just needs to keep producing those.
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compute next patch version
+        id: bump
+        run: |
+          latest=$(git tag -l 'v*.*.*' | sort -V | tail -n1)
+          if [ -z "$latest" ]; then
+            new_tag="v0.1.0"
+          else
+            IFS='.' read -r major minor patch <<< "${latest#v}"
+            new_tag="v${major}.${minor}.$((patch + 1))"
+          fi
+          echo "Latest tag: ${latest:-none}, new tag: $new_tag"
+          echo "new_tag=$new_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.bump.outputs.new_tag }}" \
+            --title "${{ steps.bump.outputs.new_tag }}" \
+            --generate-notes

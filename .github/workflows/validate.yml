@@ -1,0 +1,44 @@
+name: Validate
+
+# Runs on every PR, including the auto-generated terraform-aws-modules
+# version-bump PRs - this is the signal for whether a module bump needs a
+# matching change here before it's safe to merge.
+
+on:
+  pull_request:
+    branches:
+      - main
+
+# Read-only: this job only validates, it never needs to write anything. Also
+# note secrets are withheld entirely for pull_request runs triggered from a
+# fork (unlike pull_request_target) - LEANSPACE_BOT_TOKEN below is simply
+# empty on a fork PR, so the private-module fetch fails safely there rather
+# than ever exposing the token to untrusted PR code.
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.14.0"
+
+      # platform-infra-modules (the //vault module source) is private; the
+      # default GITHUB_TOKEN only grants access to this repo. terraform-aws-
+      # modules itself is public and needs no auth.
+      - name: Configure git auth for private module sources
+        run: |
+          git config --global url."https://x-access-token:${{ secrets.LEANSPACE_BOT_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: terraform fmt
+        run: terraform fmt -check -diff
+
+      - name: terraform init
+        run: terraform init -backend=false -input=false
+
+      - name: terraform validate
+        run: terraform validate
