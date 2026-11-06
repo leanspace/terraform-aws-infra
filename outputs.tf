@@ -240,3 +240,19 @@ output "bucket_names" {
   description = "Map of logical bucket name to its actual S3 bucket name, for every enabled bucket"
   value       = { for k, m in module.bucket : k => m.id }
 }
+
+########################################
+# s3-kafka-bridge
+########################################
+
+# Renamed from "queue_urls"/"irsa_role_arn" (generic names, prefixed for clarity now
+# that every component shares one root).
+output "s3_kafka_bridge_queue_urls" {
+  description = "SQS queue URL per bridged S3 notification (for the platform-delivery forwarder)."
+  value       = { for k, q in aws_sqs_queue.s3_kafka_bridge : k => q.url }
+}
+
+output "s3_kafka_bridge_irsa_role_arn" {
+  description = "IRSA role ARN for the S3 -> Kafka forwarder (null if s3_kafka_bridges is empty)."
+  value       = try(module.s3_kafka_bridge_irsa_role[0].role_arn, null)
+}

@@ -107,6 +107,8 @@ s3_buckets = {
 | <a name="module_opensearch"></a> [opensearch](#module\_opensearch) | git::https://github.com/leanspace/terraform-aws-modules.git//opensearch | v0.1.2 |
 | <a name="module_opensearch_kms_key"></a> [opensearch\_kms\_key](#module\_opensearch\_kms\_key) | git::https://github.com/leanspace/terraform-aws-modules.git//kms | v0.1.2 |
 | <a name="module_postgres"></a> [postgres](#module\_postgres) | git::https://github.com/leanspace/terraform-aws-modules.git//database | v0.1.2 |
+| <a name="module_s3_for_sqs_bucket"></a> [s3\_for\_sqs\_bucket](#module\_s3\_for\_sqs\_bucket) | git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket | v0.1.2 |
+| <a name="module_s3_kafka_bridge_irsa_role"></a> [s3\_kafka\_bridge\_irsa\_role](#module\_s3\_kafka\_bridge\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | v0.1.2 |
 | <a name="module_services_s3_irsa_role"></a> [services\_s3\_irsa\_role](#module\_services\_s3\_irsa\_role) | git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role | v0.1.2 |
 | <a name="module_vault_export_acm"></a> [vault\_export\_acm](#module\_vault\_export\_acm) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_database"></a> [vault\_export\_database](#module\_vault\_export\_database) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
@@ -114,6 +116,7 @@ s3_buckets = {
 | <a name="module_vault_export_networking"></a> [vault\_export\_networking](#module\_vault\_export\_networking) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_opensearch"></a> [vault\_export\_opensearch](#module\_vault\_export\_opensearch) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vault_export_s3"></a> [vault\_export\_s3](#module\_vault\_export\_s3) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
+| <a name="module_vault_export_s3_kafka_bridge"></a> [vault\_export\_s3\_kafka\_bridge](#module\_vault\_export\_s3\_kafka\_bridge) | git::https://github.com/leanspace/platform-infra-modules.git//vault | main |
 | <a name="module_vpc"></a> [vpc](#module\_vpc) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc | v0.1.2 |
 | <a name="module_vpc_endpoints"></a> [vpc\_endpoints](#module\_vpc\_endpoints) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints | v0.1.2 |
 | <a name="module_vpc_flow_logs"></a> [vpc\_flow\_logs](#module\_vpc\_flow\_logs) | git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs | v0.1.2 |
@@ -132,17 +135,23 @@ s3_buckets = {
 | [aws_eks_access_policy_association.admins](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/eks_access_policy_association) | resource |
 | [aws_eks_access_policy_association.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/eks_access_policy_association) | resource |
 | [aws_iam_openid_connect_provider.github](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_openid_connect_provider) | resource |
+| [aws_iam_policy.agent_s3_for_sqs](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.alb_controller](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_policy) | resource |
 | [aws_iam_role.alb_controller](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role.ebs_csi](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role.github_deployment](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy.github_eks_deploy](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.agent_s3_for_sqs](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.alb_controller_attach](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.ebs_csi](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_iam_role_policy_attachment.github_deployment_admin](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/iam_role_policy_attachment) | resource |
+| [aws_s3_bucket_notification.s3_kafka_bridge](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/s3_bucket_notification) | resource |
 | [aws_security_group.vpc_lattice_allow_all](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/security_group) | resource |
 | [aws_security_group_rule.postgres_self_reference](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/security_group_rule) | resource |
+| [aws_sqs_queue.s3_kafka_bridge](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/sqs_queue) | resource |
+| [aws_sqs_queue.s3_kafka_bridge_dlq](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/sqs_queue) | resource |
+| [aws_sqs_queue_policy.s3_kafka_bridge](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/resources/sqs_queue_policy) | resource |
 | [time_sleep.wait_for_oidc](https://registry.terraform.io/providers/hashicorp/time/0.13.1/docs/resources/sleep) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/caller_identity) | data source |
@@ -152,6 +161,7 @@ s3_buckets = {
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/partition) | data source |
 | [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/region) | data source |
 | [aws_route53_zone.selected](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/route53_zone) | data source |
+| [aws_s3_bucket.s3_kafka_bridge](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/s3_bucket) | data source |
 | [aws_secretsmanager_secret_version.db_master_password](https://registry.terraform.io/providers/hashicorp/aws/5.95.0/docs/data-sources/secretsmanager_secret_version) | data source |
 | [http_http.alb_controller_policy](https://registry.terraform.io/providers/hashicorp/http/3.4.5/docs/data-sources/http) | data source |
 
@@ -206,6 +216,9 @@ s3_buckets = {
 | <a name="input_resource_prefix"></a> [resource\_prefix](#input\_resource\_prefix) | The prefix for the resources | `string` | `"leanspace"` | no |
 | <a name="input_retention_in_days"></a> [retention\_in\_days](#input\_retention\_in\_days) | Retention period for CloudWatch log groups in days | `number` | `90` | no |
 | <a name="input_s3_buckets"></a> [s3\_buckets](#input\_s3\_buckets) | Map of S3 buckets to manage, keyed by a short logical name. Several keys<br/>are already known (the buckets the platform uses today, see<br/>local.known\_bucket\_names in s3.tf) and default to disabled; reusing one<br/>of those keys here overrides its fields (most commonly just<br/>`enabled = true`). Any other key creates a brand-new, ad-hoc bucket the<br/>same way. Every bucket, known or ad-hoc, defaults to disabled unless<br/>explicitly enabled.<br/><br/>versioning\_enabled is left unset (null) rather than defaulting here so<br/>that enabling a known bucket (e.g. `{ enabled = true }`) doesn't silently<br/>override that bucket's category-appropriate default from<br/>local.known\_bucket\_overrides in s3.tf -- set it explicitly to override<br/>that default either way. | <pre>map(object({<br/>    enabled            = optional(bool, false)<br/>    name               = optional(string)<br/>    versioning_enabled = optional(bool)<br/>    force_destroy      = optional(bool, false)<br/>    sse_algorithm      = optional(string, "aws:kms")<br/>    kms_key_arn        = optional(string)<br/>    lifecycle_rule     = optional(any, [])<br/>    policy_json        = optional(string)<br/>    tags               = optional(map(string), {})<br/>  }))</pre> | `{}` | no |
+| <a name="input_s3_for_sqs_tenant_keys"></a> [s3\_for\_sqs\_tenant\_keys](#input\_s3\_for\_sqs\_tenant\_keys) | Tenants to create an `<environment>-<tenant>-s3-for-sqs` bucket for; each needs an existing `<tenant>-agent-aws-credentials-role`. | `list(string)` | `[]` | no |
+| <a name="input_s3_kafka_bridge_service_account"></a> [s3\_kafka\_bridge\_service\_account](#input\_s3\_kafka\_bridge\_service\_account) | IRSA subject of the in-cluster forwarder that moves bridged S3 events from SQS to Kafka. | `string` | `"system:serviceaccount:infra:s3-kafka-bridge"` | no |
+| <a name="input_s3_kafka_bridges"></a> [s3\_kafka\_bridges](#input\_s3\_kafka\_bridges) | Bucket notifications to bridge into Kafka, keyed by the SQS queue suffix (`leanspace-<env>-<key>`). | <pre>map(object({<br/>    bucket        = string<br/>    events        = list(string)<br/>    filter_prefix = optional(string)<br/>    filter_suffix = optional(string)<br/>  }))</pre> | `{}` | no |
 | <a name="input_services_s3_bucket_names"></a> [services\_s3\_bucket\_names](#input\_services\_s3\_bucket\_names) | S3 bucket names the services/lambda IRSA role (`leanspace-<env>-services-s3-access`)<br/>is granted read/write on. Bucket names differ per environment/AWS account (e.g.<br/>buckets reused from an existing ECS environment during a migration), so this must<br/>be set explicitly per environment - there is no sensible shared default. Leave as<br/>the default empty list to skip creating the role entirely (e.g. environments that<br/>don't need it yet, or where S3 access is still handled another way). | `list(string)` | `[]` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | A map of tags to add to all resources | `map(string)` | `{}` | no |
 | <a name="input_team_name"></a> [team\_name](#input\_team\_name) | Team name tag applied to component resources | `string` | `"silver"` | no |
@@ -254,6 +267,8 @@ s3_buckets = {
 | <a name="output_public_subnet_arns"></a> [public\_subnet\_arns](#output\_public\_subnet\_arns) | List of ARNs of public subnets (null if enable\_networking is false - no equivalent when reusing an existing VPC) |
 | <a name="output_public_subnets"></a> [public\_subnets](#output\_public\_subnets) | List of IDs of public subnets (falls back to var.public\_subnets when enable\_networking is false) |
 | <a name="output_public_subnets_cidr_blocks"></a> [public\_subnets\_cidr\_blocks](#output\_public\_subnets\_cidr\_blocks) | List of CIDR blocks of public subnets (null if enable\_networking is false - no equivalent when reusing an existing VPC) |
+| <a name="output_s3_kafka_bridge_irsa_role_arn"></a> [s3\_kafka\_bridge\_irsa\_role\_arn](#output\_s3\_kafka\_bridge\_irsa\_role\_arn) | IRSA role ARN for the S3 -> Kafka forwarder (null if s3\_kafka\_bridges is empty). |
+| <a name="output_s3_kafka_bridge_queue_urls"></a> [s3\_kafka\_bridge\_queue\_urls](#output\_s3\_kafka\_bridge\_queue\_urls) | SQS queue URL per bridged S3 notification (for the platform-delivery forwarder). |
 | <a name="output_security_group_id"></a> [security\_group\_id](#output\_security\_group\_id) | The security group ID of the Aurora DB (null if enable\_database is false). |
 | <a name="output_services_s3_irsa_role_arn"></a> [services\_s3\_irsa\_role\_arn](#output\_services\_s3\_irsa\_role\_arn) | IRSA role ARN for services/lambda S3 access (null if services\_s3\_bucket\_names is empty). |
 | <a name="output_vpc_arn"></a> [vpc\_arn](#output\_vpc\_arn) | The ARN of the VPC (null if enable\_networking is false - no equivalent when reusing an existing VPC) |

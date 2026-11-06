@@ -387,6 +387,27 @@ locals {
           for b in var.services_s3_bucket_names : "arn:aws:s3:::${b}/*"
         ]
       },
+      {
+        Sid      = "PutSqsPayloadObjects"
+        Effect   = "Allow"
+        Action   = ["s3:PutObject"]
+        Resource = ["arn:aws:s3:::*-s3-for-sqs/*"]
+      },
+      {
+        Sid    = "SQSManagement"
+        Effect = "Allow"
+        Action = [
+          "sqs:CreateQueue",
+          "sqs:TagQueue",
+          "sqs:SendMessage",
+          "sqs:GetQueueAttributes",
+          "sqs:GetQueueUrl",
+          "sqs:DeleteQueue",
+        ]
+        Resource = [
+          "arn:aws:sqs:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*-command-bus.fifo"
+        ]
+      },
     ]
   })
 }
@@ -412,6 +433,80 @@ module "services_s3_irsa_role" {
   ]
 
   tags = local.eks_tags
+}
+
+# Commands offloads SQS command-bus payloads here; expiry must stay above the 23h queue retention.
+locals {
+  s3_for_sqs_buckets = { for t in var.s3_for_sqs_tenant_keys : t => "${var.environment}-${t}-s3-for-sqs" }
+}
+
+module "s3_for_sqs_bucket" {
+  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.2"
+  for_each = local.s3_for_sqs_buckets
+
+  bucket_name        = each.value
+  versioning_enabled = false
+  sse_algorithm      = "AES256"
+  lifecycle_rule = [
+    {
+      id         = "DeleteOldMessages"
+      enabled    = true
+      expiration = { days = 1 }
+    },
+  ]
+  policy_json = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Deny"
+        Principal = { AWS = "*" }
+        Action    = "*"
+        Resource  = "arn:aws:s3:::${each.value}/*"
+        Condition = { Bool = { "aws:SecureTransport" = "false" } }
+      },
+    ]
+  })
+
+  tags = local.eks_tags
+}
+
+# Separate managed policy, so the tenant's CloudFormation stack doesn't remove it from the agent role.
+resource "aws_iam_policy" "agent_s3_for_sqs" {
+  for_each = local.s3_for_sqs_buckets
+
+  name = "${each.key}-agent-${var.environment}-s3-for-sqs-access"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AgentS3BucketForSqs"
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketLocation",
+          "s3:ListBucket",
+          "s3:GetObject",
+          "s3:GetObjectVersion",
+          "s3:GetObjectTagging",
+          "s3:PutObject",
+          "s3:PutObjectTagging",
+          "s3:DeleteObject",
+        ]
+        Resource = [
+          module.s3_for_sqs_bucket[each.key].arn,
+          "${module.s3_for_sqs_bucket[each.key].arn}/*",
+        ]
+      },
+    ]
+  })
+
+  tags = local.eks_tags
+}
+
+resource "aws_iam_role_policy_attachment" "agent_s3_for_sqs" {
+  for_each = local.s3_for_sqs_buckets
+
+  role       = "${each.key}-agent-aws-credentials-role"
+  policy_arn = aws_iam_policy.agent_s3_for_sqs[each.key].arn
 }
 
 locals {

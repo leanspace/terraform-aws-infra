@@ -237,6 +237,29 @@ variable "github_eks_deploy_subjects" {
   default     = []
 }
 
+variable "s3_for_sqs_tenant_keys" {
+  description = "Tenants to create an `<environment>-<tenant>-s3-for-sqs` bucket for; each needs an existing `<tenant>-agent-aws-credentials-role`."
+  type        = list(string)
+  default     = []
+}
+
+variable "s3_kafka_bridges" {
+  description = "Bucket notifications to bridge into Kafka, keyed by the SQS queue suffix (`leanspace-<env>-<key>`)."
+  type = map(object({
+    bucket        = string
+    events        = list(string)
+    filter_prefix = optional(string)
+    filter_suffix = optional(string)
+  }))
+  default = {}
+}
+
+variable "s3_kafka_bridge_service_account" {
+  description = "IRSA subject of the in-cluster forwarder that moves bridged S3 events from SQS to Kafka."
+  type        = string
+  default     = "system:serviceaccount:infra:s3-kafka-bridge"
+}
+
 variable "enable_github_deployment_role" {
   description = "Whether to create github-deployment-role: account-wide AdministratorAccess via GitHub Actions OIDC, restricted to github_deployment_role_subjects (required when true - see its own validation). This role (and the GitHub OIDC provider it and github-eks-deploy both share) previously came from this account's own bootstrap process outside this repo - not present in a freshly-created account until created here. Defaults to false, same as enable_github_eks_deploy_role, since every existing environment's tfvars predates this variable and doesn't set github_deployment_role_subjects."
   type        = bool
