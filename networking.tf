@@ -81,7 +81,7 @@ locals {
 
 module "vpc" {
   count                      = var.enable_networking ? 1 : 0
-  source                     = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc?ref=v0.1.2"
+  source                     = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc?ref=v0.1.3"
   name                       = var.name
   azs                        = local.azs
   private_subnet_tags        = local.private_subnet_tags
@@ -96,7 +96,7 @@ module "vpc" {
 
 module "vpc_flow_logs" {
   count          = var.enable_networking ? 1 : 0
-  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs?ref=v0.1.2"
+  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-flow-logs?ref=v0.1.3"
   s3_bucket_name = "${var.resource_prefix}-vpc-flow-logs-${var.environment}"
   tags           = local.networking_tags
 }
@@ -104,7 +104,7 @@ module "vpc_flow_logs" {
 module "vpc_endpoints" {
   count          = var.enable_networking ? 1 : 0
   depends_on     = [module.vpc]
-  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints?ref=v0.1.2"
+  source         = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-endpoints?ref=v0.1.3"
   vpc_id         = module.vpc[0].vpc_id
   vpc_cidr_block = module.vpc[0].vpc_cidr_block
   endpoints      = local.vpc_endpoints
@@ -114,7 +114,7 @@ module "vpc_endpoints" {
 module "vpc_lattice" {
   count              = var.enable_networking ? 1 : 0
   depends_on         = [module.vpc]
-  source             = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-lattice?ref=v0.1.2"
+  source             = "git::https://github.com/leanspace/terraform-aws-modules.git//networking/vpc-lattice?ref=v0.1.3"
   name               = "${var.resource_prefix}-vpc-lattice-${var.environment}"
   vpc_id             = module.vpc[0].vpc_id
   security_group_ids = [aws_security_group.vpc_lattice_allow_all[0].id]
