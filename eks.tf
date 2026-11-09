@@ -564,6 +564,11 @@ locals {
         mount = "leanspace"
         path  = "${var.profile}/${var.environment}/eks_services_s3_irsa_role_arn"
         data  = { value = module.services_s3_irsa_role[0].role_arn }
+      },
+      {
+        mount = "leanspace"
+        path  = "${var.profile}/${var.environment}/object_store_url"
+        data  = { value = "https://s3.${data.aws_region.current.name}.amazonaws.com" }
       }
     ] : []
   )
