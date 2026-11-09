@@ -243,6 +243,12 @@ variable "s3_for_sqs_tenant_keys" {
   default     = []
 }
 
+variable "s3_for_sqs_bucket_exists" {
+  description = "Whether the `<environment>-<tenant>-s3-for-sqs` bucket(s) already exist (e.g. created by CloudFormation - during the agnostic migration this bucket already exists, same pattern as services_s3_bucket_names' pre-existing buckets) rather than needing to be created here. When true, looks them up by name instead."
+  type        = bool
+  default     = false
+}
+
 variable "s3_kafka_bridges" {
   description = "Bucket notifications to bridge into Kafka, keyed by the SQS queue suffix (`leanspace-<env>-<key>`)."
   type = map(object({
@@ -252,6 +258,12 @@ variable "s3_kafka_bridges" {
     filter_suffix = optional(string)
   }))
   default = {}
+}
+
+variable "s3_kafka_bridge_queues_exist" {
+  description = "Whether the SQS queues (and their DLQs) for s3_kafka_bridges already exist (e.g. created by CloudFormation - during the agnostic migration these queues already exist, same pattern as services_s3_bucket_names' pre-existing buckets) rather than needing to be created here. When true, looks them up by name instead; their redrive policy is assumed already configured."
+  type        = bool
+  default     = false
 }
 
 variable "s3_kafka_bridge_service_account" {

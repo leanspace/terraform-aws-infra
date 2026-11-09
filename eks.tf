@@ -438,11 +438,27 @@ module "services_s3_irsa_role" {
 # Commands offloads SQS command-bus payloads here; expiry must stay above the 23h queue retention.
 locals {
   s3_for_sqs_buckets = { for t in var.s3_for_sqs_tenant_keys : t => "${var.environment}-${t}-s3-for-sqs" }
+
+  # Bucket ARN per tenant, regardless of whether this root created it or it already
+  # existed (e.g. from CloudFormation - during the agnostic migration this bucket
+  # already exists, same pattern as s3_kafka_bridge_queues_exist). Only
+  # aws_iam_policy.agent_s3_for_sqs needs the ARN, so only the bucket resource itself
+  # needs the toggle.
+  s3_for_sqs_bucket_arns = var.s3_for_sqs_bucket_exists ? {
+    for k, b in data.aws_s3_bucket.s3_for_sqs_existing : k => b.arn
+    } : {
+    for k, m in module.s3_for_sqs_bucket : k => m.arn
+  }
+}
+
+data "aws_s3_bucket" "s3_for_sqs_existing" {
+  for_each = var.s3_for_sqs_bucket_exists ? local.s3_for_sqs_buckets : {}
+  bucket   = each.value
 }
 
 module "s3_for_sqs_bucket" {
   source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.3"
-  for_each = local.s3_for_sqs_buckets
+  for_each = var.s3_for_sqs_bucket_exists ? {} : local.s3_for_sqs_buckets
 
   bucket_name        = each.value
   versioning_enabled = false
@@ -492,8 +508,8 @@ resource "aws_iam_policy" "agent_s3_for_sqs" {
           "s3:DeleteObject",
         ]
         Resource = [
-          module.s3_for_sqs_bucket[each.key].arn,
-          "${module.s3_for_sqs_bucket[each.key].arn}/*",
+          local.s3_for_sqs_bucket_arns[each.key],
+          "${local.s3_for_sqs_bucket_arns[each.key]}/*",
         ]
       },
     ]

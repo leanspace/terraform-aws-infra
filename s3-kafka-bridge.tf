@@ -17,6 +17,22 @@ locals {
   s3_kafka_bridge_name = "leanspace-${var.environment}-s3-kafka-bridge"
 
   s3_kafka_bridge_buckets = toset([for b in values(var.s3_kafka_bridges) : b.bucket])
+
+  # Queue ARN/URL per bridge, regardless of whether this root created the queue or it
+  # already existed (e.g. from CloudFormation, same pattern as services_s3_bucket_names'
+  # pre-existing buckets - during the agnostic migration these queues already exist).
+  # Everything downstream (policy, notification, IRSA, vault export) only needs the
+  # ARN/URL, so only the queue resources themselves need the toggle.
+  s3_kafka_bridge_queue_arns = var.s3_kafka_bridge_queues_exist ? {
+    for k, q in data.aws_sqs_queue.s3_kafka_bridge_existing : k => q.arn
+    } : {
+    for k, q in aws_sqs_queue.s3_kafka_bridge : k => q.arn
+  }
+  s3_kafka_bridge_queue_urls = var.s3_kafka_bridge_queues_exist ? {
+    for k, q in data.aws_sqs_queue.s3_kafka_bridge_existing : k => q.url
+    } : {
+    for k, q in aws_sqs_queue.s3_kafka_bridge : k => q.url
+  }
 }
 
 data "aws_s3_bucket" "s3_kafka_bridge" {
@@ -24,8 +40,15 @@ data "aws_s3_bucket" "s3_kafka_bridge" {
   bucket   = each.value
 }
 
+data "aws_sqs_queue" "s3_kafka_bridge_existing" {
+  for_each = var.s3_kafka_bridge_queues_exist ? var.s3_kafka_bridges : {}
+  name     = "leanspace-${var.environment}-${each.key}"
+}
+
+# Redrive policy on a pre-existing queue is assumed already configured (by whatever
+# created it) - not managed here when s3_kafka_bridge_queues_exist is true.
 resource "aws_sqs_queue" "s3_kafka_bridge_dlq" {
-  for_each = var.s3_kafka_bridges
+  for_each = var.s3_kafka_bridge_queues_exist ? {} : var.s3_kafka_bridges
 
   name                      = "leanspace-${var.environment}-${each.key}-dead-letter"
   message_retention_seconds = 1209600
@@ -34,7 +57,7 @@ resource "aws_sqs_queue" "s3_kafka_bridge_dlq" {
 }
 
 resource "aws_sqs_queue" "s3_kafka_bridge" {
-  for_each = var.s3_kafka_bridges
+  for_each = var.s3_kafka_bridge_queues_exist ? {} : var.s3_kafka_bridges
 
   name                       = "leanspace-${var.environment}-${each.key}"
   message_retention_seconds  = 345600
@@ -53,7 +76,7 @@ resource "aws_sqs_queue" "s3_kafka_bridge" {
 resource "aws_sqs_queue_policy" "s3_kafka_bridge" {
   for_each = var.s3_kafka_bridges
 
-  queue_url = aws_sqs_queue.s3_kafka_bridge[each.key].id
+  queue_url = local.s3_kafka_bridge_queue_urls[each.key]
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -62,7 +85,7 @@ resource "aws_sqs_queue_policy" "s3_kafka_bridge" {
         Effect    = "Allow"
         Principal = { Service = "s3.amazonaws.com" }
         Action    = "sqs:SendMessage"
-        Resource  = aws_sqs_queue.s3_kafka_bridge[each.key].arn
+        Resource  = local.s3_kafka_bridge_queue_arns[each.key]
         Condition = {
           ArnEquals    = { "aws:SourceArn" = data.aws_s3_bucket.s3_kafka_bridge[each.value.bucket].arn }
           StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
@@ -81,7 +104,7 @@ resource "aws_s3_bucket_notification" "s3_kafka_bridge" {
     for_each = { for k, v in var.s3_kafka_bridges : k => v if v.bucket == each.value }
     content {
       id            = queue.key
-      queue_arn     = aws_sqs_queue.s3_kafka_bridge[queue.key].arn
+      queue_arn     = local.s3_kafka_bridge_queue_arns[queue.key]
       events        = queue.value.events
       filter_prefix = queue.value.filter_prefix
       filter_suffix = queue.value.filter_suffix
@@ -112,7 +135,7 @@ module "s3_kafka_bridge_irsa_role" {
           "sqs:GetQueueAttributes",
           "sqs:GetQueueUrl",
         ]
-        Resource = [for q in aws_sqs_queue.s3_kafka_bridge : q.arn]
+        Resource = values(local.s3_kafka_bridge_queue_arns)
       }
     ]
   })
@@ -138,10 +161,10 @@ module "vault_export_s3_kafka_bridge" {
       }
     ],
     [
-      for k, q in aws_sqs_queue.s3_kafka_bridge : {
+      for k, url in local.s3_kafka_bridge_queue_urls : {
         mount = "leanspace"
         path  = "${var.profile}/${var.environment}/s3_kafka_bridge_${k}_queue_url"
-        data  = { value = q.url }
+        data  = { value = url }
       }
     ]
   ) : []
