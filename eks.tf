@@ -11,16 +11,17 @@ locals {
 
   github_deployment_role_arn = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/github-deployment-role"
 
-  extra_admin_role_arns = toset([
-    for arn in concat(
-      var.enable_github_deployment_role_admin_access ? [local.github_deployment_role_arn] : [],
-      var.eks_admin_principal_arns
-    ) : arn if arn != data.aws_iam_session_context.current.issuer_arn
-  ])
-}
-
-data "aws_iam_session_context" "current" {
-  arn = data.aws_caller_identity.current.arn
+  # No "exclude the current caller" filter here: that was only ever needed to avoid
+  # colliding with the eks/cluster module's own dynamic "cluster_creator" access entry,
+  # which granted admin to whoever's session ran apply. That's disabled now
+  # (enable_cluster_creator_admin_permissions = false in terraform-aws-modules//eks/cluster),
+  # so this list is static/config-driven - it must NOT depend on who's currently running
+  # terraform, or CI (github-deployment-role) would destroy its own admin access entry
+  # every time it applies.
+  extra_admin_role_arns = toset(concat(
+    var.enable_github_deployment_role_admin_access ? [local.github_deployment_role_arn] : [],
+    var.eks_admin_principal_arns
+  ))
 }
 
 # Tag existing subnets so AWS Load Balancer Controller can discover them.
