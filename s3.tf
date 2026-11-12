@@ -73,7 +73,7 @@ locals {
 }
 
 module "bucket" {
-  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.3"
+  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.5"
   for_each = local.enabled_buckets
 
   bucket_name        = coalesce(each.value.name, "${var.resource_prefix}-${var.environment}-${each.key}")
