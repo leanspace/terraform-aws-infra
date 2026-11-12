@@ -5,7 +5,7 @@ data "aws_route53_zone" "selected" {
 
 module "agnostk_certificate" {
   count  = var.enable_acm ? 1 : 0
-  source = "git::https://github.com/leanspace/terraform-aws-modules.git//acm?ref=v0.1.3"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//acm?ref=v0.1.9"
 
   domain_name               = var.domain_name
   route53_zone_id           = data.aws_route53_zone.selected[0].zone_id
