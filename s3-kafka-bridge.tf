@@ -118,7 +118,7 @@ resource "aws_s3_bucket_notification" "s3_kafka_bridge" {
 module "s3_kafka_bridge_irsa_role" {
   count = length(var.s3_kafka_bridges) > 0 ? 1 : 0
 
-  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.3"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.9"
 
   role_name   = local.s3_kafka_bridge_name
   policy_name = local.s3_kafka_bridge_name

@@ -59,13 +59,13 @@ data "http" "alb_controller_policy" {
 }
 
 module "eks_control_plane_logs" {
-  source       = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/logs?ref=v0.1.3"
+  source       = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/logs?ref=v0.1.9"
   cluster_name = local.cluster_name
   tags         = local.eks_tags
 }
 
 module "eks_cluster" {
-  source     = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/cluster?ref=v0.1.3"
+  source     = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/cluster?ref=v0.1.9"
   depends_on = [module.eks_control_plane_logs]
 
   kube_proxy_addon_version             = var.kube_proxy_addon_version
@@ -99,7 +99,7 @@ data "aws_iam_openid_connect_provider" "oidc" {
 }
 
 module "eks_managed_node_group" {
-  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/node-group?ref=v0.1.3"
+  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/node-group?ref=v0.1.9"
   for_each = var.node_groups
 
   # No depends_on = [module.eks_cluster]: the cluster outputs below already order it. An explicit
@@ -132,7 +132,7 @@ module "eks_managed_node_group" {
 }
 
 module "install_coredns_addon" {
-  source        = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons?ref=v0.1.3"
+  source        = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons?ref=v0.1.9"
   depends_on    = [module.eks_managed_node_group]
   addon_name    = "coredns"
   addon_version = var.coredns_addon_version
@@ -141,7 +141,7 @@ module "install_coredns_addon" {
 }
 
 module "install_ebscsi_addon" {
-  source        = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons?ref=v0.1.3"
+  source        = "git::https://github.com/leanspace/terraform-aws-modules.git//eks/addons?ref=v0.1.9"
   depends_on    = [module.eks_managed_node_group]
   addon_name    = "aws-ebs-csi-driver"
   addon_version = var.ebs_addon_version
@@ -185,7 +185,7 @@ resource "aws_iam_role_policy_attachment" "ebs_csi" {
 # cluster-autoscaler (platform-enablers chart, kube-system/cluster-autoscaler) only manages the
 # system node group's ASG (--nodes=min:max:<system asg>), so scaling actions are scoped to it.
 module "cluster_autoscaler_irsa_role" {
-  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.3"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.9"
 
   role_name   = "leanspace-${var.environment}-cluster-autoscaler"
   policy_name = "leanspace-${var.environment}-cluster-autoscaler-policy"
@@ -416,7 +416,7 @@ locals {
 module "services_s3_irsa_role" {
   count = length(var.services_s3_bucket_names) > 0 ? 1 : 0
 
-  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.3"
+  source = "git::https://github.com/leanspace/terraform-aws-modules.git//iam/irsa-role?ref=v0.1.9"
 
   role_name   = "leanspace-${var.environment}-services-s3-access"
   policy_name = "leanspace-${var.environment}-services-s3-access"
@@ -458,7 +458,7 @@ data "aws_s3_bucket" "s3_for_sqs_existing" {
 }
 
 module "s3_for_sqs_bucket" {
-  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.3"
+  source   = "git::https://github.com/leanspace/terraform-aws-modules.git//s3/bucket?ref=v0.1.9"
   for_each = var.s3_for_sqs_bucket_exists ? {} : local.s3_for_sqs_buckets
 
   bucket_name        = each.value
