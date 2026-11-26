@@ -1,0 +1,19 @@
+title = "Leanspace centralized secret detection"
+[extend]
+useDefault = true
+
+# Literal assignments only: quoted JSON/YAML/source and unquoted dotenv/Terraform.
+# No entropy floor: low-entropy client secrets are still credentials.
+[[rules]]
+id = "leanspace-client-secret"
+description = "Hardcoded OAuth client secret or Leanspace credential"
+regex = '''(?i)\b(?:client[_-]?secret|leanspace[_-](?:secret|token|api[_-]?key|password))["']?[ \t]*[:=][ \t]*["']?([a-z0-9_./+@!%=-]{8,})["']?(?:[ \t,;}\r\n]|$)'''
+secretGroup = 1
+keywords = ["client", "leanspace"]
+[[rules.allowlists]]
+description = "Exact placeholder values and variable/property references only"
+regexTarget = "secret"
+regexes = [
+  '''(?i)^(?:example|dummy|changeme|placeholder|your[_-]secret)$''',
+  '''^(?:process\.env\.|os\.environ\.|var\.|env\.|secrets\.)[A-Za-z_][A-Za-z0-9_]*$''',
+]
