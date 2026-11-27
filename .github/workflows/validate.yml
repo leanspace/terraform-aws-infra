@@ -11,7 +11,7 @@ on:
 
 # Read-only: this job only validates, it never needs to write anything. Also
 # note secrets are withheld entirely for pull_request runs triggered from a
-# fork (unlike pull_request_target) - LEANSPACE_BOT_TOKEN below is simply
+# fork (unlike pull_request_target) - LEANSPACE_PLATFORM_INFRA_READ_TOKEN below is simply
 # empty on a fork PR, so the private-module fetch fails safely there rather
 # than ever exposing the token to untrusted PR code.
 permissions:
@@ -32,7 +32,7 @@ jobs:
       # modules itself is public and needs no auth.
       - name: Configure git auth for private module sources
         run: |
-          git config --global url."https://x-access-token:${{ secrets.LEANSPACE_BOT_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          git config --global url."https://x-access-token:${{ secrets.LEANSPACE_PLATFORM_INFRA_READ_TOKEN }}@github.com/".insteadOf "https://github.com/"
 
       - name: terraform fmt
         run: terraform fmt -check -diff
